@@ -24,7 +24,6 @@ add_library(protocol_session ${library_sources})
 if(build_tests)
   set(
     test_common_sources
-      test/SessionSpy.cpp
       test/SessionTest.cpp
   )
 
