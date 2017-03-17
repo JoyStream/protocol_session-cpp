@@ -170,7 +170,7 @@ class PeerNotReadyToStartUploading : public std::runtime_error {
 public:
 
     PeerNotReadyToStartUploading(PeerNotReadyToStartUploadingCause cause)
-        : std::runtime_error("Peer is not ready to start uploading.")
+        : std::runtime_error(std::string("Peer is not ready to start uploading : ") + PeerNotReadyToStartUploadingCauseToString.at(cause))
         , peerNotReadyToStartUploadingCause(cause) {
     }
 
