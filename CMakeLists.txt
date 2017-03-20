@@ -15,6 +15,7 @@ include_directories("${CMAKE_SOURCE_DIR}/include")
 set(
   library_sources
     src/PieceInformation.cpp
+    src/common.cpp
 )
 
 # === build library ===
