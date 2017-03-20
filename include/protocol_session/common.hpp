@@ -10,8 +10,6 @@
 
 #include <common/KeyPair.hpp>
 #include <protocol_wire/protocol_wire.hpp>
-#include <boost/assign/list_of.hpp>
-#include <boost/unordered_map.hpp>
 #include <unordered_map>
 #include <string>
 
@@ -79,10 +77,7 @@ enum class PeerNotReadyToStartUploadingCause {
     terms_expired
 };
 
-const boost::unordered_map<PeerNotReadyToStartUploadingCause,const char*> PeerNotReadyToStartUploadingCauseToString  = boost::assign::map_list_of
-  (PeerNotReadyToStartUploadingCause::connection_gone, "Connection gone")
-  (PeerNotReadyToStartUploadingCause::connection_not_in_invited_state, "Connection not in invited state")
-  (PeerNotReadyToStartUploadingCause::terms_expired, "Terms expired");
+const char* PeerNotReadyToStartUploadingCauseToString(PeerNotReadyToStartUploadingCause cause);
 
 }
 }
