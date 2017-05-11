@@ -77,6 +77,8 @@ enum class PeerNotReadyToStartUploadingCause {
     terms_expired
 };
 
+const char* PeerNotReadyToStartUploadingCauseToString(PeerNotReadyToStartUploadingCause cause);
+
 }
 }
 #endif // JOYSTREAM_PROTOCOLSESSION_COMMON_HPP
