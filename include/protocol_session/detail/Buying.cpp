@@ -383,7 +383,7 @@ namespace detail {
         piece.downloaded();
 
         // Remove from unassigned queue if present
-        _deAssignedPieces.erase(std::remove(_deAssignedPieces.begin(), _deAssignedPieces.end(), index));
+        _deAssignedPieces.erase(std::remove(_deAssignedPieces.begin(), _deAssignedPieces.end(), index), _deAssignedPieces.end());
     }
 
     template <class ConnectionIdType>
