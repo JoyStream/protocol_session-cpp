@@ -112,6 +112,8 @@ public:
 
     protocol_wire::BuyerTerms terms() const;
 
+    void setPickNextPieceMethod(const std::function<int(const std::vector<detail::Piece<ConnectionIdType>>*)> & pickNextPieceMethod);
+
 private:
 
     //// Assigning pieces
@@ -186,6 +188,9 @@ private:
     // (i.e. entered state StartedState::sending_invitations).
     // Is used to figure out when to start trying to build the contract
     std::chrono::high_resolution_clock::time_point _lastStartOfSendingInvitations;
+
+    // Function that if defined will return the next piece that we should download
+    std::function<int(const std::vector<detail::Piece<ConnectionIdType>>*)> _pickNextPieceMethod;
 };
 
 }

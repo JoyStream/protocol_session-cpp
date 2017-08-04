@@ -599,18 +599,25 @@ namespace detail {
     template <class ConnectionIdType>
     int Buying<ConnectionIdType>::getNextUnassignedPiece() const {
 
-         // Look in interval [_assignmentLowerBound, end]
-         for(uint32_t i = _assignmentLowerBound;i < _pieces.size();i++)
-             if(_pieces[i].state() == PieceState::unassigned)
-                 return i;
+        assert(this->_pickNextPieceMethod != nullptr);
 
-         // Then try interval [0, _assignmentLowerBound)
-         for(uint32_t i = 0;i < _assignmentLowerBound;i++)
-             if(_pieces[i].state() == PieceState::unassigned)
-                 return i;
+        uint32_t i = this->_pickNextPieceMethod(&_pieces);
 
-         // We did not find anything
-         throw std::runtime_error("Unable to find any unassigned pieces.");
+        std::cout << "Hello next piece : " << i << std::endl;
+
+        if (_pieces[i].state() == protocol_session::PieceState::unassigned) {
+          std::cout << "This piece is unassigned !" << std::endl;
+        }
+
+        if (_pieces[i].state() != protocol_session::PieceState::unassigned) {
+          std::cout << "This piece is not unassigned !" << std::endl;
+          // We did not find anything
+          throw std::runtime_error("Unable to find any unassigned pieces.");
+        }
+
+        std::cout << i << std::endl;
+
+        return i;
     }
 
     template<class ConnectionIdType>
@@ -699,6 +706,11 @@ namespace detail {
     template <class ConnectionIdType>
     protocol_wire::BuyerTerms Buying<ConnectionIdType>::terms() const {
         return _terms;
+    }
+
+    template <class ConnectionIdType>
+    void Buying<ConnectionIdType>::setPickNextPieceMethod(const std::function<int(const std::vector<detail::Piece<ConnectionIdType>>*)> & pickNextPieceMethod) {
+      _pickNextPieceMethod = pickNextPieceMethod;
     }
 
 }
