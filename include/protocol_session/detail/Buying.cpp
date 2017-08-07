@@ -603,19 +603,10 @@ namespace detail {
 
         uint32_t i = this->_pickNextPieceMethod(&_pieces);
 
-        std::cout << "Hello next piece : " << i << std::endl;
-
-        if (_pieces[i].state() == protocol_session::PieceState::unassigned) {
-          std::cout << "This piece is unassigned !" << std::endl;
-        }
-
         if (_pieces[i].state() != protocol_session::PieceState::unassigned) {
-          std::cout << "This piece is not unassigned !" << std::endl;
           // We did not find anything
           throw std::runtime_error("Unable to find any unassigned pieces.");
         }
-
-        std::cout << i << std::endl;
 
         return i;
     }
