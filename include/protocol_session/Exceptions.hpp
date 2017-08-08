@@ -177,6 +177,15 @@ public:
     PeerNotReadyToStartUploadingCause peerNotReadyToStartUploadingCause;
 };
 
+class NoPieceAvailableException : public std::runtime_error {
+
+public:
+
+    NoPieceAvailableException()
+        : std::runtime_error(std::string("No more piece available")) {
+    }
+};
+
 }
 }
 }

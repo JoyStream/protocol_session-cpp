@@ -577,7 +577,7 @@ namespace detail {
         } else {
 
             try {
-                pieceIndex = getNextUnassignedPiece();
+                pieceIndex = this->_pickNextPieceMethod(&_pieces);;
             } catch(const std::runtime_error & e) {
                 // No unassigned piece was found
                 return false;
@@ -594,19 +594,6 @@ namespace detail {
         _assignmentLowerBound = pieceIndex + 1;
 
         return true;
-    }
-
-    template <class ConnectionIdType>
-    int Buying<ConnectionIdType>::getNextUnassignedPiece() const {
-
-        uint32_t i = this->_pickNextPieceMethod(&_pieces);
-
-        if (_pieces[i].state() != protocol_session::PieceState::unassigned) {
-          // We did not find anything
-          throw std::runtime_error("Unable to find any unassigned pieces.");
-        }
-
-        return i;
     }
 
     template<class ConnectionIdType>

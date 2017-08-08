@@ -121,9 +121,6 @@ private:
     // Tries to assign an unassigned piece to given seller
     bool tryToAssignAndRequestPiece(detail::Seller<ConnectionIdType> &);
 
-    // Tries to find next unassigned piece
-    int getNextUnassignedPiece() const;
-
     //// Utility routines
 
     // Prepare given connection for deletion due to given cause
