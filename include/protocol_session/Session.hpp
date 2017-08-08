@@ -37,6 +37,9 @@ namespace detail {
     class Observing;
 }
 
+    template <class ConnectionIdType>
+    using PickNextPieceMethod = std::function<int(const std::vector<detail::Piece<ConnectionIdType>>*)>;
+
     class TorrentPieceInformation;
 
     template <class ConnectionIdType>
@@ -149,7 +152,7 @@ namespace detail {
          */
         void startDownloading(const Coin::Transaction & contractTx,
                               const PeerToStartDownloadInformationMap<ConnectionIdType> & peerToStartDownloadInformationMap,
-                              const std::function<int(const std::vector<detail::Piece<ConnectionIdType>>*)> & pickNextPieceMethod);
+                              const PickNextPieceMethod<ConnectionIdType> & pickNextPieceMethod);
 
         // A valid piece was sent too us on given connection
         void validPieceReceivedOnConnection(const ConnectionIdType &, int index);

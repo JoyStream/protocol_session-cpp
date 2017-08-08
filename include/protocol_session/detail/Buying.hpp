@@ -112,7 +112,7 @@ public:
 
     protocol_wire::BuyerTerms terms() const;
 
-    void setPickNextPieceMethod(const std::function<int(const std::vector<detail::Piece<ConnectionIdType>>*)> & pickNextPieceMethod);
+    void setPickNextPieceMethod(const PickNextPieceMethod<ConnectionIdType> & pickNextPieceMethod);
 
 private:
 
@@ -190,7 +190,7 @@ private:
     std::chrono::high_resolution_clock::time_point _lastStartOfSendingInvitations;
 
     // Function that if defined will return the next piece that we should download
-    std::function<int(const std::vector<detail::Piece<ConnectionIdType>>*)> _pickNextPieceMethod;
+    PickNextPieceMethod<ConnectionIdType> _pickNextPieceMethod;
 };
 
 }

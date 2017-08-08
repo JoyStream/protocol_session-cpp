@@ -599,8 +599,6 @@ namespace detail {
     template <class ConnectionIdType>
     int Buying<ConnectionIdType>::getNextUnassignedPiece() const {
 
-        assert(this->_pickNextPieceMethod != nullptr);
-
         uint32_t i = this->_pickNextPieceMethod(&_pieces);
 
         if (_pieces[i].state() != protocol_session::PieceState::unassigned) {
@@ -700,7 +698,7 @@ namespace detail {
     }
 
     template <class ConnectionIdType>
-    void Buying<ConnectionIdType>::setPickNextPieceMethod(const std::function<int(const std::vector<detail::Piece<ConnectionIdType>>*)> & pickNextPieceMethod) {
+    void Buying<ConnectionIdType>::setPickNextPieceMethod(const PickNextPieceMethod<ConnectionIdType> & pickNextPieceMethod) {
       _pickNextPieceMethod = pickNextPieceMethod;
     }
 
