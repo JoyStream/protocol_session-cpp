@@ -575,9 +575,8 @@ namespace detail {
             pieceIndex = _deAssignedPieces.front();
             _deAssignedPieces.pop_front();
         } else {
-
             try {
-                pieceIndex = this->_pickNextPieceMethod(&_pieces);;
+                pieceIndex = this->_pickNextPieceMethod(&_pieces);
             } catch(const std::runtime_error & e) {
                 // No unassigned piece was found
                 return false;
