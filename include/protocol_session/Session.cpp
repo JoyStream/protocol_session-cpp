@@ -478,7 +478,9 @@ namespace protocol_session {
     }
 
     template<class ConnectionIdType>
-    void Session<ConnectionIdType>::startDownloading(const Coin::Transaction & contractTx, const PeerToStartDownloadInformationMap<ConnectionIdType> & peerToStartDownloadInformationMap) {
+    void Session<ConnectionIdType>::startDownloading(const Coin::Transaction & contractTx,
+                                                     const PeerToStartDownloadInformationMap<ConnectionIdType> & peerToStartDownloadInformationMap,
+                                                     const PickNextPieceMethod<ConnectionIdType> & pickNextPieceMethod) {
 
         if(_state == SessionState::paused)
             throw exception::StateIncompatibleOperation("cannot start downloading on a paused session.");
@@ -499,7 +501,7 @@ namespace protocol_session {
             case SessionMode::buying:
 
                 assert(_observing == nullptr && _buying != nullptr && _selling == nullptr);
-
+                _buying->setPickNextPieceMethod(pickNextPieceMethod);
                 _buying->startDownloading(contractTx, peerToStartDownloadInformationMap);
                 break;
 
@@ -1015,4 +1017,3 @@ namespace protocol_session {
     }
 }
 }
-

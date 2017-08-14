@@ -112,15 +112,14 @@ public:
 
     protocol_wire::BuyerTerms terms() const;
 
+    void setPickNextPieceMethod(const PickNextPieceMethod<ConnectionIdType> & pickNextPieceMethod);
+
 private:
 
     //// Assigning pieces
 
     // Tries to assign an unassigned piece to given seller
     bool tryToAssignAndRequestPiece(detail::Seller<ConnectionIdType> &);
-
-    // Tries to find next unassigned piece
-    int getNextUnassignedPiece() const;
 
     //// Utility routines
 
@@ -186,6 +185,9 @@ private:
     // (i.e. entered state StartedState::sending_invitations).
     // Is used to figure out when to start trying to build the contract
     std::chrono::high_resolution_clock::time_point _lastStartOfSendingInvitations;
+
+    // Function that if defined will return the next piece that we should download
+    PickNextPieceMethod<ConnectionIdType> _pickNextPieceMethod;
 };
 
 }
