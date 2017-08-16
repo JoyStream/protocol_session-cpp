@@ -13,7 +13,7 @@ class ProtocolSessionBase(ConanFile):
     build_policy = "missing"
 
     def source(self):
-        raise Error("")
+        raise Exception("abstract base package was exported")
 
     def build(self):
         cmake = CMake(self.settings)
