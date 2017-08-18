@@ -9,7 +9,7 @@ class ProtocolSessionBase(ConanFile):
     git_repo = "git@github.com:JoyStream/protocol_session-cpp.git"
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake"
-    requires = "ProtocolStateMachine/0.1@joystream/stable"
+    requires = "ProtocolStateMachine/0.1.1@joystream/stable"
     build_policy = "missing"
 
     def source(self):
