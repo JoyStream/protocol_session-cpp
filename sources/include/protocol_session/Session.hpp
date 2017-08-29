@@ -9,6 +9,7 @@
 #define JOYSTREAM_PROTOCOLSESSION_SESSION_HPP
 
 #include <protocol_session/detail/Connection.hpp>
+#include <protocol_session/detail/Piece.hpp>
 #include <protocol_session/Callbacks.hpp>
 #include <protocol_session/SessionMode.hpp>
 #include <protocol_session/SessionState.hpp>
@@ -35,6 +36,9 @@ namespace detail {
     template <class ConnectionIdType>
     class Observing;
 }
+
+    template <class ConnectionIdType>
+    using PickNextPieceMethod = std::function<int(const std::vector<detail::Piece<ConnectionIdType>>*)>;
 
     class TorrentPieceInformation;
 
@@ -147,7 +151,8 @@ namespace detail {
          * @throws exception::NoLongerSendingInvitations if invitations are no longer being sent in buying mode (_state != BuyingState::sending_invitations)
          */
         void startDownloading(const Coin::Transaction & contractTx,
-                              const PeerToStartDownloadInformationMap<ConnectionIdType> & peerToStartDownloadInformationMap);
+                              const PeerToStartDownloadInformationMap<ConnectionIdType> & peerToStartDownloadInformationMap,
+                              const PickNextPieceMethod<ConnectionIdType> & pickNextPieceMethod);
 
         // A valid piece was sent too us on given connection
         void validPieceReceivedOnConnection(const ConnectionIdType &, int index);
@@ -275,4 +280,3 @@ namespace detail {
 #include <protocol_session/Session.cpp>
 
 #endif // JOYSTREAM_PROTOCOLSESSION_SESSION_HPP
-
