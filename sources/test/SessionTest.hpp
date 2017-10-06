@@ -159,7 +159,7 @@ public:
             return joiningContract;
         }
 
-        void contractAnnounced() {            
+        void contractAnnounced() {
             auto slot = spy->sendReadyCallbackSlot;
             EXPECT_TRUE((int)slot.size() > 0);
             ready = std::get<0>(slot.front());
@@ -233,6 +233,8 @@ public:
     bool hasPendingFullPieceRequest(const std::vector<SellerPeer> &);
     void takeSingleSellerToExchange(SellerPeer &);
     void assertSellerInvited(const SellerPeer &);
+
+    static int nextPiecePicker(const std::vector<detail::Piece<ID>>* pieces);
 };
 
 #endif // TEST_HPP
