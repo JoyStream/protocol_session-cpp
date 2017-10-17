@@ -527,7 +527,7 @@ void SessionTest::takeSingleSellerToExchange(SellerPeer & peer) {
     PeerToStartDownloadInformationMap<ID> map = downloadInformationMap(v);
 
     // Start download
-    session->startDownloading(contractTx, map);
+    session->startDownloading(contractTx, map, nextPiecePicker);
 
     // make sure contract was announced to only relevant peers
     peer.contractAnnounced();
@@ -548,4 +548,13 @@ void SessionTest::assertSellerInvited(const SellerPeer & peer) {
 
     EXPECT_EQ(m2.index(), peer.sellerTermsIndex);
 
+}
+
+
+int SessionTest::nextPiecePicker(const std::vector<detail::Piece<ID>>* pieces) {
+  for(uint32_t i = 0;i < pieces->size();i++)
+    if(pieces->at(i).state() == PieceState::unassigned)
+      return i;
+
+  throw exception::NoPieceAvailableException();
 }

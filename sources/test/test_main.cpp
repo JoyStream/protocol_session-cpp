@@ -485,7 +485,7 @@ TEST_F(SessionTest, buying)
     PeerToStartDownloadInformationMap<ID> map = downloadInformationMap(v);
 
     // Start download
-    session->startDownloading(contractTx, map);
+    session->startDownloading(contractTx, map, SessionTest::nextPiecePicker);
 
     // make sure contract was announced to only relevant peers
     first.contractAnnounced();

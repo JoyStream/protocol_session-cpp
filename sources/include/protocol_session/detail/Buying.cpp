@@ -350,7 +350,7 @@ namespace detail {
 
                         // Check if seller has timed out in servicing the current request,
                         // if so remove connection
-                        if(s.servicingPieceHasTimedOut(std::chrono::seconds(5))) // <== hard coded for now, logic will be factored out later! see PR on this
+                        if(s.servicingPieceHasTimedOut(std::chrono::seconds(20))) // <== hard coded for now, logic will be factored out later! see PR on this
                             removeConnection(id, DisconnectCause::seller_servicing_piece_has_timed_out);
                     }
                 }
