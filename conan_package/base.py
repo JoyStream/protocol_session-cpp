@@ -3,7 +3,7 @@ import os
 
 class ProtocolSessionBase(ConanFile):
     name = "ProtocolSession"
-    version = "0.1.1"
+    version = "0.1.2"
     license = "(c) JoyStream Inc. 2016-2017"
     url = "https://github.com/JoyStream/protocol_session-conan.git"
     git_repo = "git@github.com:JoyStream/protocol_session-cpp.git"
