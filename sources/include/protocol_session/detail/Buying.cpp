@@ -609,11 +609,13 @@ namespace detail {
 
             detail::Seller<ConnectionIdType> & s = itr->second;
 
-            // Seller can't be gone
-            assert(s.state() != SellerState::gone);
-
-            // Remove
-            removeSeller(s);
+            // It is possible to find a seller in the "gone" state that we have previoulsy removed.
+            // This happens when the connection times out and is later re-establish. The connection will have the
+            // same connection id (because it is the same peer)
+            if(s.state() != SellerState::gone) {
+              // Remove
+              removeSeller(s);
+            }
         }
 
         // Destroy connection - important todo before notifying client
