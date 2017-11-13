@@ -1,7 +1,7 @@
 
 # ProtocolSession
 
-Current published release: `ProtocolSession/0.1.1@joystream/stable`
+conan package name: `ProtocolSession/0.1.4@joystream/stable`
 
 ### Dependencies
 
@@ -25,4 +25,5 @@ sh run_tests.sh
 
 ## License & Copyright
 
-`...add later...`
+JoyStream protocol_session library is released under the terms of the MIT license.
+See [LICENSE](LICENCE) for more information.
