@@ -3,13 +3,14 @@ import os
 
 class ProtocolSessionBase(ConanFile):
     name = "ProtocolSession"
-    version = "0.1.3"
+    version = "0.1.4"
     license = "(c) JoyStream Inc. 2016-2017"
     url = "https://github.com/JoyStream/protocol_session-conan.git"
-    git_repo = "git@github.com:JoyStream/protocol_session-cpp.git"
+    repo_ssh_url = "git@github.com:JoyStream/protocol_session-cpp.git"
+    repo_https_url = "https://github.com/JoyStream/protocol_session-conan.git"
     settings = "os", "compiler", "build_type", "arch"
     generators = "cmake"
-    requires = "ProtocolStateMachine/0.1.1@joystream/stable"
+    requires = "ProtocolStateMachine/0.1.2@joystream/stable"
     build_policy = "missing"
 
     def source(self):
