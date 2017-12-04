@@ -29,7 +29,8 @@ namespace detail {
                                              const protocol_statemachine::SellerInterruptedContract & sellerInterruptedContract,
                                              const protocol_statemachine::ReceivedFullPiece & receivedFullPiece,
                                              const protocol_statemachine::MessageOverflow & remoteMessageOverflow,
-                                             const protocol_statemachine::MessageOverflow & localMessageOverflow)
+                                             const protocol_statemachine::MessageOverflow & localMessageOverflow,
+                                             Coin::Network network)
         : _connectionId(connectionId)
         , _machine(peerAnnouncedMode,
                    invitedToOutdatedContract,
@@ -46,7 +47,8 @@ namespace detail {
                    receivedFullPiece,
                    remoteMessageOverflow,
                    localMessageOverflow,
-                   0) {
+                   0,
+                   network) {
 
         // Initiating state machine
         _machine.initiate();
