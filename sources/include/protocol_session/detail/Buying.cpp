@@ -132,19 +132,18 @@ namespace detail {
 
             // Count downloaded piece
             _numberOfMissingPieces--;
-
-            // Do we still have pieces which are not yet downloaded
-            if(_numberOfMissingPieces > 0) {
-
-                // If so, and are stills started,
-                // then we try to assign a piece to this seller
-                if(_session->_state == SessionState::started)
-                    tryToAssignAndRequestPiece(s);
-
-            } else if(_numberOfMissingPieces == 0) // otherwise we are done!
-                _state = BuyingState::download_completed;
-
         }
+
+        // Do we still have pieces which are not yet downloaded
+        if(_numberOfMissingPieces > 0) {
+
+            // If so, and are stills started,
+            // then we try to assign a piece to this seller
+            if(_session->_state == SessionState::started)
+                tryToAssignAndRequestPiece(s);
+
+        } else if(_numberOfMissingPieces == 0) // otherwise we are done!
+            _state = BuyingState::download_completed;
 
     }
 
