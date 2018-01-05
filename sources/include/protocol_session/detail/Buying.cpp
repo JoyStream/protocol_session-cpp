@@ -301,8 +301,13 @@ namespace detail {
         for(auto itr = _session->_connections.cbegin();itr != _session->_connections.cend();)
             itr = removeConnection(itr->first, DisconnectCause::client);
 
-        // Update state
+        // Update core session state
         _session->_state = SessionState::stopped;
+
+        // Reset to sending_invitations state if download did not complete
+        if (_state == BuyingState::downloading) {
+            _state = BuyingState::sending_invitations;
+        }
     }
 
     template <class ConnectionIdType>
