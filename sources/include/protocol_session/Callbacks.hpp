@@ -125,8 +125,9 @@ using ReceivedValidPayment = std::function<void(const ConnectionIdType &,
                                                 uint64_t totalNumberOfPayments,
                                                 uint64_t totalAmountPaid)>;
 
+typedef std::function<void(void)> AllSellersGone;
+
 }
 }
 
 #endif // JOYSTREAM_PROTOCOLSESSION_CALLBACKS_HPP
-

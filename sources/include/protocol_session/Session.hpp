@@ -86,7 +86,8 @@ namespace detail {
                        const FullPieceArrived<ConnectionIdType> &,
                        const SentPayment<ConnectionIdType> &,
                        const protocol_wire::BuyerTerms &,
-                       const TorrentPieceInformation &);
+                       const TorrentPieceInformation &,
+                       const AllSellersGone &);
 
         /**
          * Warning: Do not call any of these operations
