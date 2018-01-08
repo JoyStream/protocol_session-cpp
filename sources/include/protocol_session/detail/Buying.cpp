@@ -27,7 +27,8 @@ namespace detail {
                                      const FullPieceArrived<ConnectionIdType> & fullPieceArrived,
                                      const SentPayment<ConnectionIdType> & sentPayment,
                                      const protocol_wire::BuyerTerms & terms,
-                                     const TorrentPieceInformation & information)
+                                     const TorrentPieceInformation & information,
+                                     const AllSellersGone & allSellersGone)
         : _session(session)
         , _removedConnection(removedConnection)
         , _fullPieceArrived(fullPieceArrived)
@@ -35,7 +36,8 @@ namespace detail {
         , _state(BuyingState::sending_invitations)
         , _terms(terms)
         , _numberOfMissingPieces(0)
-        , _assignmentLowerBound(0) {
+        , _assignmentLowerBound(0)
+        , _allSellersGone(allSellersGone) {
         //, _lastStartOfSendingInvitations(0) {
 
         // Setup pieces
@@ -329,6 +331,8 @@ namespace detail {
         if(_session->_state == SessionState::started) {
 
             // Allocate pieces if we are downloading
+            // Timeout sellers if they have not seviced a piece in time.
+            // Reset state to allow restarting downloading after all sellers are gone
             if(_state == BuyingState::downloading) {
 
                 for(auto mapping : _sellers) {
@@ -358,7 +362,11 @@ namespace detail {
                         if(s.servicingPieceHasTimedOut(std::chrono::seconds(20))) // <== hard coded for now, logic will be factored out later! see PR on this
                             removeConnection(id, DisconnectCause::seller_servicing_piece_has_timed_out);
                     }
+
                 }
+
+                // If all sellers are gone, reset state
+                resetIfAllSellersGone();
             }
         }
     }
@@ -415,22 +423,7 @@ namespace detail {
             // ditch any existing sellers
             _sellers.clear();
 
-            for(auto mapping : _session->_connections) {
-
-                detail::Connection<ConnectionIdType> * c = mapping.second;
-
-                // Check that this peer is seller,
-                protocol_statemachine::AnnouncedModeAndTerms a = c->announcedModeAndTermsFromPeer();
-
-                // and has good enough terms to warrant an invitation,
-                // then send invitation
-                if(a.modeAnnounced() == protocol_statemachine::ModeAnnounced::sell && _terms.satisfiedBy(a.sellModeTerms())) {
-
-                    c->processEvent(protocol_statemachine::event::InviteSeller());
-
-                    std::cout << "Invited: " << IdToString(mapping.first) << std::endl;
-                }
-            }
+            sendInvitations();
         }
     }
 
@@ -566,6 +559,30 @@ namespace detail {
     }
 
     template <class ConnectionIdType>
+    void Buying<ConnectionIdType>::sendInvitations() const {
+
+      assert(_session->_state == SessionState::started);
+      assert(_state == BuyingState::sending_invitations);
+
+      for(auto mapping : _session->_connections) {
+
+          detail::Connection<ConnectionIdType> * c = mapping.second;
+
+          // Check that this peer is seller,
+          protocol_statemachine::AnnouncedModeAndTerms a = c->announcedModeAndTermsFromPeer();
+
+          // and has good enough terms to warrant an invitation,
+          // then send invitation
+          if(a.modeAnnounced() == protocol_statemachine::ModeAnnounced::sell && _terms.satisfiedBy(a.sellModeTerms())) {
+
+              c->processEvent(protocol_statemachine::event::InviteSeller());
+
+              std::cout << "Invited: " << IdToString(mapping.first) << std::endl;
+          }
+      }
+    }
+
+    template <class ConnectionIdType>
     bool Buying<ConnectionIdType>::tryToAssignAndRequestPiece(detail::Seller<ConnectionIdType> & s) {
 
         assert(_session->_state == SessionState::started);
@@ -664,8 +681,37 @@ namespace detail {
             }
         }
 
-        // Mark as seller as gone
+        // Mark as seller as gone, but is not removed from _sellers map
         s.removed();
+    }
+
+    template <class ConnectionIdType>
+    void Buying<ConnectionIdType>::resetIfAllSellersGone () {
+
+        assert(_state == BuyingState::downloading);
+        assert(_session->_state == SessionState::started);
+
+        // Find any seller that is not in gone state
+        auto seller = find_if(_sellers.begin(), _sellers.end(), [] ( std::pair<ConnectionIdType, detail::Seller<ConnectionIdType>> mapping) {
+          return mapping.second.state() != SellerState::gone;
+        });
+
+        // At least one seller is still connected
+        if(seller != _sellers.cend()) return;
+
+        std::cout << "All Sellers Are Gone" << std::endl;
+
+        // Notify client
+        _allSellersGone();
+
+        // Transition to sending invitations state
+        _state = BuyingState::sending_invitations;
+
+        // Clear sellers
+        _sellers.clear();
+
+        // Send invitations to all connections
+        sendInvitations();
     }
 
     template <class ConnectionIdType>
