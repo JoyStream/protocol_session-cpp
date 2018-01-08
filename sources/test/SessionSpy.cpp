@@ -43,7 +43,8 @@ void SessionSpy<ConnectionIdType>::toMonitoredBuyMode(const protocol_wire::Buyer
                         fullPieceArrivedCallbackSlot.hook(),
                         SentPayment<ConnectionIdType>([](const ConnectionIdType &, uint64_t, uint64_t, uint64_t, int) -> void {}), // not bothering to add monitoring to this now, session will be deprecated
                         terms,
-                        information);
+                        information,
+                        AllSellersGone([]() -> void {}));
 }
 
 template <class ConnectionIdType>

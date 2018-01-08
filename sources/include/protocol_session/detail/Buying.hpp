@@ -47,7 +47,8 @@ public:
            const FullPieceArrived<ConnectionIdType> &,
            const SentPayment<ConnectionIdType> &,
            const protocol_wire::BuyerTerms &,
-           const TorrentPieceInformation &);
+           const TorrentPieceInformation &,
+           const AllSellersGone &);
 
     //// Connection level client events
 
@@ -116,6 +117,10 @@ public:
 
 private:
 
+    void sendInvitations () const;
+
+    void resetIfAllSellersGone ();
+
     //// Assigning pieces
 
     // Tries to assign an unassigned piece to given seller
@@ -145,6 +150,7 @@ private:
     RemovedConnectionCallbackHandler<ConnectionIdType> _removedConnection;
     FullPieceArrived<ConnectionIdType> _fullPieceArrived;
     SentPayment<ConnectionIdType> _sentPayment;
+    AllSellersGone _allSellersGone;
 
     // State
     BuyingState _state;

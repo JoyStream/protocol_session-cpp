@@ -165,7 +165,8 @@ namespace protocol_session {
                                               const FullPieceArrived<ConnectionIdType> & fullPieceArrived,
                                               const SentPayment<ConnectionIdType> & sentPayment,
                                               const protocol_wire::BuyerTerms & terms,
-                                              const TorrentPieceInformation & information) {
+                                              const TorrentPieceInformation & information,
+                                              const AllSellersGone & allSellersGone) {
 
         // Prepare for exiting current state
         switch(_mode) {
@@ -208,7 +209,8 @@ namespace protocol_session {
                                                        fullPieceArrived,
                                                        sentPayment,
                                                        terms,
-                                                       information);
+                                                       information,
+                                                       allSellersGone);
     }
 
     template <class ConnectionIdType>
