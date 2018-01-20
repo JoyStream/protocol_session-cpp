@@ -569,29 +569,37 @@ namespace detail {
     }
 
     template <class ConnectionIdType>
-    bool Buying<ConnectionIdType>::tryToAssignAndRequestPieces(detail::Seller<ConnectionIdType> & s) {
+    int Buying<ConnectionIdType>::tryToAssignAndRequestPieces(detail::Seller<ConnectionIdType> & s, int maxConcurrentRequests) {
 
         assert(_session->_state == SessionState::started);
         assert(_state == BuyingState::downloading);
         assert(!s.isGone());
 
-        // Try to find index of next unassigned piece
-        int pieceIndex;
+        int totalNewRequests = 0;
+        int concurrentRequests = s.piecesAwaitingArrival().size();
 
-        try {
-            pieceIndex = this->_pickNextPieceMethod(&_pieces);
-        } catch(const std::runtime_error & e) {
-            // No unassigned piece was found
-            return false;
+        while(concurrentRequests < maxConcurrentRequests) {
+
+          // Try to find index of next unassigned piece
+          int pieceIndex;
+
+          try {
+              pieceIndex = this->_pickNextPieceMethod(&_pieces);
+          } catch(const std::runtime_error & e) {
+              // No unassigned piece was found
+              break;
+          }
+
+          // Assign piece to seller
+          _pieces[pieceIndex].assigned(s.connection()->connectionId());
+
+          // Request piece from seller
+          concurrentRequests = s.requestPiece(pieceIndex);
+
+          totalNewRequests++;
         }
 
-        // Assign piece to seller
-        _pieces[pieceIndex].assigned(s.connection()->connectionId());
-
-        // Request piece from seller
-        s.requestPiece(pieceIndex);
-
-        return true;
+        return totalNewRequests;
     }
 
     template<class ConnectionIdType>

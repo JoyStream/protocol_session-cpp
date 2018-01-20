@@ -124,7 +124,7 @@ private:
     //// Assigning pieces
 
     // Tries to assign an unassigned piece to given seller
-    bool tryToAssignAndRequestPieces(detail::Seller<ConnectionIdType> &);
+    int tryToAssignAndRequestPieces(detail::Seller<ConnectionIdType> &, int maxConcurrentRequests = 1);
 
     //// Utility routines
 
