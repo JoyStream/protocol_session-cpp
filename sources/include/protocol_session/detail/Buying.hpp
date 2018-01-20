@@ -174,19 +174,6 @@ private:
     // Is used to detect when we are done.
     uint32_t _numberOfMissingPieces;
 
-    // Indexes of pieces which were assigned, but then later
-    // unassigned for some reason (e.g. seller left, timed out, etc).
-    // They are prioritized when assiging new pieces.
-    // NB: using std::deque over std::queue, since latter
-    std::deque<uint32_t> _deAssignedPieces;
-
-    // Index before which we should never assign a piece unless all pieces
-    // with a greater index have been assigned. Following this constraint
-    // results in in-order downloading of pieces, e.g. for media streaming.
-    // Will typically also be reset of client desires to set streaming of media to
-    // some midway point
-    uint32_t _assignmentLowerBound;
-
     // When we started sending out invitations
     // (i.e. entered state StartedState::sending_invitations).
     // Is used to figure out when to start trying to build the contract

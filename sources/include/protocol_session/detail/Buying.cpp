@@ -36,7 +36,6 @@ namespace detail {
         , _state(BuyingState::sending_invitations)
         , _terms(terms)
         , _numberOfMissingPieces(0)
-        , _assignmentLowerBound(0)
         , _allSellersGone(allSellersGone) {
         //, _lastStartOfSendingInvitations(0) {
 
@@ -384,9 +383,6 @@ namespace detail {
         }
 
         piece.downloaded();
-
-        // Remove from unassigned queue if present
-        _deAssignedPieces.erase(std::remove(_deAssignedPieces.begin(), _deAssignedPieces.end(), index), _deAssignedPieces.end());
     }
 
     template <class ConnectionIdType>
@@ -582,17 +578,11 @@ namespace detail {
         // Try to find index of next unassigned piece
         int pieceIndex;
 
-        // Prioritize deassigned piece
-        if(!_deAssignedPieces.empty()) {
-            pieceIndex = _deAssignedPieces.front();
-            _deAssignedPieces.pop_front();
-        } else {
-            try {
-                pieceIndex = this->_pickNextPieceMethod(&_pieces);
-            } catch(const std::runtime_error & e) {
-                // No unassigned piece was found
-                return false;
-            }
+        try {
+            pieceIndex = this->_pickNextPieceMethod(&_pieces);
+        } catch(const std::runtime_error & e) {
+            // No unassigned piece was found
+            return false;
         }
 
         // Assign piece to seller
@@ -600,9 +590,6 @@ namespace detail {
 
         // Request piece from seller
         s.requestPiece(pieceIndex);
-
-        // Update assignment bound
-        _assignmentLowerBound = pieceIndex + 1;
 
         return true;
     }
@@ -654,9 +641,6 @@ namespace detail {
 
             // Deassign the piece
             piece.deAssign();
-
-            // Add to queue of unassigned pieces
-            _deAssignedPieces.push_back(piece.index());
         }
 
         // Mark as seller as gone, but is not removed from _sellers map
