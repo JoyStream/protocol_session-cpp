@@ -9,7 +9,6 @@
 #define JOYSTREAM_PROTOCOLSESSION_STATUS
 
 #include <protocol_session/PieceState.hpp>
-#include <protocol_session/SellerState.hpp>
 #include <protocol_session/BuyingState.hpp>
 #include <protocol_session/SessionMode.hpp>
 #include <protocol_session/SessionState.hpp>
@@ -115,13 +114,9 @@ namespace status {
 
         Seller() {}
 
-        Seller(SellerState state, ConnectionIdType connection)
-            : state(state)
-            , connection(connection) {
+        Seller(ConnectionIdType connection)
+            : connection(connection) {
         }
-
-        // State of this seller
-        SellerState state;
 
         // Connection identifier for seller
         ConnectionIdType connection;

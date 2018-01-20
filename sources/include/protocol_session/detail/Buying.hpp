@@ -62,10 +62,10 @@ public:
     void startDownloading(const Coin::Transaction & contractTx,
                           const PeerToStartDownloadInformationMap<ConnectionIdType> & peerToStartDownloadInformationMap);
 
-    // A valid piece was sent too us on given connection
+    // A valid piece was sent to us on given connection
     void validPieceReceivedOnConnection(const ConnectionIdType &, int index);
 
-    // An invalid piece was sent too us on given connection
+    // An invalid piece was sent to us on given connection
     // Should not be called when session is stopped.
     void invalidPieceReceivedOnConnection(const ConnectionIdType &, int index);
 
@@ -124,7 +124,7 @@ private:
     //// Assigning pieces
 
     // Tries to assign an unassigned piece to given seller
-    bool tryToAssignAndRequestPiece(detail::Seller<ConnectionIdType> &);
+    bool tryToAssignAndRequestPieces(detail::Seller<ConnectionIdType> &);
 
     //// Utility routines
 
