@@ -142,7 +142,7 @@ namespace detail {
             // If there was a matching seller, payment was sent, and we are stills started,
             // then we try to assign more pieces to the seller
             if(paymentSent && _session->_state == SessionState::started){
-              tryToAssignAndRequestPieces(itr->second);
+              tryToAssignAndRequestPieces(itr->second, 4);
             }
 
         } else if(_numberOfMissingPieces == 0) // otherwise we are done!
@@ -350,7 +350,7 @@ namespace detail {
                         // * seller interrupts contract by updating terms
                         // * seller sent an invalid piece
 
-                        tryToAssignAndRequestPieces(s);
+                        tryToAssignAndRequestPieces(s, 4);
                     }
                 }
 
@@ -536,7 +536,7 @@ namespace detail {
                                                                            inf.value));
 
             // Assign the first piece to this peer
-            tryToAssignAndRequestPieces(_sellers[id]);
+            tryToAssignAndRequestPieces(_sellers[id], 4);
         }
 
         /////////////////////////

@@ -27,7 +27,9 @@ namespace detail {
                                              const protocol_statemachine::InvalidPayment & invalidPayment,
                                              const protocol_statemachine::SellerJoined & sellerJoined,
                                              const protocol_statemachine::SellerInterruptedContract & sellerInterruptedContract,
-                                             const protocol_statemachine::ReceivedFullPiece & receivedFullPiece)
+                                             const protocol_statemachine::ReceivedFullPiece & receivedFullPiece,
+                                             const protocol_statemachine::MessageOverflow & remoteMessageOverflow,
+                                             const protocol_statemachine::MessageOverflow & localMessageOverflow)
         : _connectionId(connectionId)
         , _machine(peerAnnouncedMode,
                    invitedToOutdatedContract,
@@ -42,6 +44,8 @@ namespace detail {
                    sellerJoined,
                    sellerInterruptedContract,
                    receivedFullPiece,
+                   remoteMessageOverflow,
+                   localMessageOverflow,
                    0)
         , _loadedPiecePending(false) {
 

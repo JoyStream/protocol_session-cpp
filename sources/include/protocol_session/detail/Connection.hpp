@@ -41,7 +41,9 @@ namespace detail {
                    const protocol_statemachine::InvalidPayment &,
                    const protocol_statemachine::SellerJoined &,
                    const protocol_statemachine::SellerInterruptedContract &,
-                   const protocol_statemachine::ReceivedFullPiece &);
+                   const protocol_statemachine::ReceivedFullPiece &,
+                   const protocol_statemachine::MessageOverflow &,
+                   const protocol_statemachine::MessageOverflow &);
 
         // Processes given message
         template<class M>

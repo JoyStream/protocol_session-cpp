@@ -934,7 +934,9 @@ namespace protocol_session {
         [this, id](const Coin::Signature & s) { this->receivedInvalidPayment(id, s); },
         [this, id]() { this->sellerHasJoined(id); },
         [this, id]() { this->sellerHasInterruptedContract(id); },
-        [this, id](const protocol_wire::PieceData & p) { this->receivedFullPiece(id, p); });
+        [this, id](const protocol_wire::PieceData & p) { this->receivedFullPiece(id, p); },
+        [this, id]() { /*this->remoteMessageOverflow(id);*/ },
+        [this, id]() { /*this->localMessageOverflow(id);*/ });
     }
 
     template <class ConnectionIdType>
