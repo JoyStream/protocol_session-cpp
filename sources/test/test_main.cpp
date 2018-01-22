@@ -619,7 +619,7 @@ TEST_F(SessionTest, buying_seller_sent_invalid_piece)
     int requestedPiece;
     {
         ConnectionSpy<ID> * c = first.spy;
-        EXPECT_EQ((int)c->sendRequestFullPieceCallbackSlot.size(), 1);
+        EXPECT_TRUE((int)c->sendRequestFullPieceCallbackSlot.size() > 0);
         auto m2 = std::get<0>(c->sendRequestFullPieceCallbackSlot.front());
 
         requestedPiece = m2.pieceIndex();

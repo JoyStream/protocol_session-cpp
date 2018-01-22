@@ -451,13 +451,13 @@ void SessionTest::completeExchange(SellerPeer & peer) {
     int requestedPiece = 0;
 
     {
-        EXPECT_EQ((int)c->sendRequestFullPieceCallbackSlot.size(), 1);
+        EXPECT_TRUE((int)c->sendRequestFullPieceCallbackSlot.size() > 0);
         auto m2 = std::get<0>(c->sendRequestFullPieceCallbackSlot.front());
 
         requestedPiece = m2.pieceIndex();
 
         // Remove message from slot
-        c->sendRequestFullPieceCallbackSlot.clear();
+        c->sendRequestFullPieceCallbackSlot.pop_front();
     }
 
     // if so respond with some data

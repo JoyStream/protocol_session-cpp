@@ -181,7 +181,7 @@ public:
         }
 
         bool hasPendingFullPieceRequest() {
-            return spy->sendRequestFullPieceCallbackSlot.size() == 1;
+            return spy->sendRequestFullPieceCallbackSlot.size() > 0;
         }
 
         paymentchannel::Payee getPayee() {
