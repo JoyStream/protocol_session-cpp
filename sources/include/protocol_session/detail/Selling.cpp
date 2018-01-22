@@ -112,15 +112,15 @@ namespace detail {
         detail::Connection<ConnectionIdType> * c = _session->get(id);
 
         // Make sure connection is still in appropriate state
-        if(!c-> template inState<joystream::protocol_statemachine::LoadingPiece>())
+        if(!c-> template inState<joystream::protocol_statemachine::ServicingPieceRequests>())
             return;
 
-        // Store loaded piece in connection, we dont sent if paused
+        // Store loaded piece in connection, we dont send if paused
         assert(!c->loadedPiecePending());
         c->setLoadedPiecePending(true);
         c->setLoadedPieceData(data);
 
-        // If we are starte, then send off
+        // If we are started, then send off
         if(_session->state() == SessionState::started)
             tryToLoadPiece(c);
     }
@@ -273,7 +273,7 @@ namespace detail {
             detail::Connection<ConnectionIdType> * c = m.second;
 
             // Waiting for piece to be loaded, which may have been aborted due to pause
-            if(c-> template inState<protocol_statemachine::LoadingPiece>())
+            if(c-> template inState<protocol_statemachine::ServicingPieceRequests>())
                 tryToLoadPiece(c);
         }
     }
@@ -354,7 +354,7 @@ namespace detail {
     void Selling<ConnectionIdType>::tryToLoadPiece(detail::Connection<ConnectionIdType> * c) {
 
         assert(_session->state() == SessionState::started);
-        assert(c-> template inState<joystream::protocol_statemachine::LoadingPiece>());
+        assert(c-> template inState<joystream::protocol_statemachine::ServicingPieceRequests>());
 
         if(c->loadedPiecePending()) {
             c->processEvent(joystream::protocol_statemachine::event::PieceLoaded(c->loadedPieceData()));
