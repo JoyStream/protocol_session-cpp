@@ -101,7 +101,7 @@ public:
 
     //
     void assertFullPieceSent(ID, const protocol_wire::PieceData &) const;
-
+    void assertFullPieceSent(ID peer, const std::vector<protocol_wire::PieceData> &) const;
     //// Selling
 
 
@@ -161,7 +161,7 @@ public:
 
         void contractAnnounced() {
             auto slot = spy->sendReadyCallbackSlot;
-            EXPECT_TRUE((int)slot.size() > 0);
+            EXPECT_GT((int)slot.size(), 0);
             ready = std::get<0>(slot.front());
             payee = getPayee();
             // Remove message at front

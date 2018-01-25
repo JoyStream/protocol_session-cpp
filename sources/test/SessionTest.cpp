@@ -323,10 +323,23 @@ void SessionTest::assertTermsSentToAllPeers() const {
 void SessionTest::assertFullPieceSent(ID peer, const protocol_wire::PieceData & data) const {
     ConnectionSpy<ID> * c = spy->connectionSpies.at(peer);
 
-    EXPECT_EQ((int)c->sendFullPieceCallbackSlot.size(), 1);
-    auto m2 = std::get<0>(c->sendFullPieceCallbackSlot.front());
+    EXPECT_GT((int)c->sendFullPieceCallbackSlot.size(), 0);
+    auto m = std::get<0>(c->sendFullPieceCallbackSlot.front());
 
-    EXPECT_EQ(m2.pieceData(), data);
+    EXPECT_EQ(m.pieceData(), data);
+}
+
+void SessionTest::assertFullPieceSent(ID peer, const std::vector<protocol_wire::PieceData> & pieces) const {
+    ConnectionSpy<ID> * c = spy->connectionSpies.at(peer);
+
+    EXPECT_EQ((int)c->sendFullPieceCallbackSlot.size(), pieces.size());
+
+    auto it = c->sendFullPieceCallbackSlot.begin();
+
+    for(auto &pieceData : pieces) {
+      auto m = std::get<0>(*it++);
+      EXPECT_EQ(m.pieceData(), pieceData);
+    }
 }
 
 ////

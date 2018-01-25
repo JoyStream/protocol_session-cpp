@@ -106,7 +106,7 @@ TEST_F(SessionTest, selling)
     assert(sellerTerms.satisfiedBy(buyerTerms));
 
     // back to sell mode
-    toSellMode(sellerTerms, numberOfExchangesWhileStarted + 1);
+    toSellMode(sellerTerms, numberOfExchangesWhileStarted + 10);
 
     // Start session
     firstStart();
@@ -140,6 +140,27 @@ TEST_F(SessionTest, selling)
 
     // Make sure this results in piece being sent
     assertFullPieceSent(peer, data);
+    spy->reset();
+
+    // Receive two requests
+    protocol_wire::PieceData first = protocol_wire::PieceData::fromHex("cd");
+    protocol_wire::PieceData second = protocol_wire::PieceData::fromHex("ab");
+
+    receiveValidFullPieceRequest(peer, numberOfExchangesWhileStarted + 1);
+    receiveValidFullPieceRequest(peer, numberOfExchangesWhileStarted + 2);
+
+    // Load pieces out of order
+    session->pieceLoaded(peer, second, numberOfExchangesWhileStarted + 2);
+
+    // Should not send any pieces yet - first piece not yet loaded
+    EXPECT_EQ((int)c->sendFullPieceCallbackSlot.size(), 0);
+
+    // Load remaining piece
+    session->pieceLoaded(peer, first, numberOfExchangesWhileStarted + 1);
+
+    // Two pieces should have been sent in correct order
+    assertFullPieceSent(peer, {first, second});
+
     spy->reset();
 
     // Update terms
@@ -619,7 +640,7 @@ TEST_F(SessionTest, buying_seller_sent_invalid_piece)
     int requestedPiece;
     {
         ConnectionSpy<ID> * c = first.spy;
-        EXPECT_TRUE((int)c->sendRequestFullPieceCallbackSlot.size() > 0);
+        EXPECT_GT((int)c->sendRequestFullPieceCallbackSlot.size(), 0);
         auto m2 = std::get<0>(c->sendRequestFullPieceCallbackSlot.front());
 
         requestedPiece = m2.pieceIndex();
