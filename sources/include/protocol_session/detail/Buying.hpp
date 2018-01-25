@@ -123,8 +123,8 @@ private:
 
     //// Assigning pieces
 
-    // Tries to assign an unassigned piece to given seller
-    int tryToAssignAndRequestPieces(detail::Seller<ConnectionIdType> &, int maxConcurrentRequests = 1);
+    // Tries to assign pieces to given seller
+    int tryToAssignAndRequestPieces(detail::Seller<ConnectionIdType> &);
 
     //// Utility routines
 
@@ -181,6 +181,10 @@ private:
 
     // Function that if defined will return the next piece that we should download
     PickNextPieceMethod<ConnectionIdType> _pickNextPieceMethod;
+
+    // Maximum number of concurrent requests to send before waiting for piece responses
+    // The optimum value depends on many factors. It is hardcoded to 4 for now.
+    const int _maxConcurrentRequests;
 };
 
 }

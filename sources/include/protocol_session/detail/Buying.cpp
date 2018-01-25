@@ -36,7 +36,8 @@ namespace detail {
         , _state(BuyingState::sending_invitations)
         , _terms(terms)
         , _numberOfMissingPieces(0)
-        , _allSellersGone(allSellersGone) {
+        , _allSellersGone(allSellersGone)
+        , _maxConcurrentRequests(4) {
         //, _lastStartOfSendingInvitations(0) {
 
         // Setup pieces
@@ -142,7 +143,7 @@ namespace detail {
             // If there was a matching seller, payment was sent, and we are stills started,
             // then we try to assign more pieces to the seller
             if(paymentSent && _session->_state == SessionState::started){
-              tryToAssignAndRequestPieces(itr->second, 4);
+              tryToAssignAndRequestPieces(itr->second);
             }
 
         } else if(_numberOfMissingPieces == 0) // otherwise we are done!
@@ -350,7 +351,7 @@ namespace detail {
                         // * seller interrupts contract by updating terms
                         // * seller sent an invalid piece
 
-                        tryToAssignAndRequestPieces(s, 4);
+                        tryToAssignAndRequestPieces(s);
                     }
                 }
 
@@ -536,7 +537,7 @@ namespace detail {
                                                                            inf.value));
 
             // Assign the first piece to this peer
-            tryToAssignAndRequestPieces(_sellers[id], 4);
+            tryToAssignAndRequestPieces(_sellers[id]);
         }
 
         /////////////////////////
@@ -569,7 +570,7 @@ namespace detail {
     }
 
     template <class ConnectionIdType>
-    int Buying<ConnectionIdType>::tryToAssignAndRequestPieces(detail::Seller<ConnectionIdType> & s, int maxConcurrentRequests) {
+    int Buying<ConnectionIdType>::tryToAssignAndRequestPieces(detail::Seller<ConnectionIdType> & s) {
 
         assert(_session->_state == SessionState::started);
         assert(_state == BuyingState::downloading);
@@ -578,7 +579,7 @@ namespace detail {
         int totalNewRequests = 0;
         int concurrentRequests = s.piecesAwaitingArrival().size();
 
-        while(concurrentRequests < maxConcurrentRequests) {
+        while(concurrentRequests < _maxConcurrentRequests) {
 
           // Try to find index of next unassigned piece
           int pieceIndex;

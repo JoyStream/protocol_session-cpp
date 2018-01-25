@@ -26,9 +26,9 @@ public:
 
   void paymentReceived();
 
-  std::vector<int> getNextBatchToLoad(int maxLoaded);
+  std::vector<int> getNextBatchToLoad(int maxPiecesBeingServiced);
 
-  std::vector<protocol_wire::PieceData> getNextBatchToSend(int maxPendingPayments);
+  std::vector<protocol_wire::PieceData> getNextBatchToSend(int maxPiecesUnpaidFor);
 
 private:
 

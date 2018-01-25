@@ -64,13 +64,14 @@ void PieceDeliveryPipeline::paymentReceived() {
   _pipeline.pop_front();
 }
 
-std::vector<int> PieceDeliveryPipeline::getNextBatchToLoad(int maxLoaded) {
+std::vector<int> PieceDeliveryPipeline::getNextBatchToLoad(int maxPiecesBeingServiced) {
   int n = 0;
   std::vector<int> pieces;
 
   for (Piece &p : _pipeline) {
-    // The piple should not load too many pieces
-    if (n++ > maxLoaded) break;
+    // We always try to service peices at the front of the queue in the order they were added
+    // but we limit it so not to waste resources incase the buyer disappears.
+    if (n++ > maxPiecesBeingServiced) break;
 
     // Piece should be waiting to be requested
     if(p.inState<Piece::NotRequested>()) {
@@ -86,14 +87,14 @@ std::vector<int> PieceDeliveryPipeline::getNextBatchToLoad(int maxLoaded) {
 }
 
 std::vector<protocol_wire::PieceData>
-  PieceDeliveryPipeline::getNextBatchToSend(int maxPendingPayments) {
+  PieceDeliveryPipeline::getNextBatchToSend(int maxPiecesUnpaidFor) {
     int n = 0;
     std::vector<protocol_wire::PieceData> pieces;
 
     for (Piece &p : _pipeline) {
-      // At most look at first maxPendingPayments pieces to limit
-      // how many pieces are sent without a corresponding payment arriving
-      if (n++ > maxPendingPayments) break;
+      // We will only tolerate having a maximum of maxPiecesUnpaidFor pieces at anytime be delivered
+      // and not yet paid for. (a piece is popped of the front of the queue when a payment is received)
+      if (n++ > maxPiecesUnpaidFor) break;
 
       // Abort as soon as we see a piece that is either Loading or NotRequested
       // because we need to send pieces in order they were requested

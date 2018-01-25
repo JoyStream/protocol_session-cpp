@@ -118,13 +118,17 @@ private:
     // Maximum piece
     int _MAX_PIECE_INDEX;
 
-    // Maximum number of outstanding payments allowed after which we defer sending full pieces
-    // Requests are still accepted and will be honored after pending payments arrive
-    int _maxOutstandingPayments;
+    // Maximum number of pieces we will send before we defer sending pieces.
+    // Requests are still accepted and will be honored after pending payments arrive.
+    // The optimim value depends on many factors such as piece size and connection latency with a peer.
+    // For now value is hardcoded to 4
+    const int _maxOutstandingPayments;
 
-    // The maximum number of pieces to load and buffer. This is a measure to minimise overhead
-    // and reduce risk of peers sending too many requests without subsequent payment
-    int _maxPiecesToLoad;
+    // To avoid wasting resources we limit the number of pieces that will be loaded but not sent to _maxPiecesToPreload
+    // So the total number of pieces for we will try to load data for is _maxOutstandingPayments + _maxPiecesToPreload
+    // The optimim value depends on many factors such as piece size and connection latency with a peer.
+    // For now value is hardcoded to 2
+    const int _maxPiecesToPreload;
 
     // Prepare given connection for deletion due to given cause, returns next valid iterator (e.g. end)
     typename detail::ConnectionMap<ConnectionIdType>::const_iterator removeConnection(const ConnectionIdType &, DisconnectCause);

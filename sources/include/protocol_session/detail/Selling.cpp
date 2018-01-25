@@ -33,8 +33,8 @@ namespace detail {
         , _receivedValidPayment(receivedValidPayment)
         , _terms(terms)
         , _MAX_PIECE_INDEX(MAX_PIECE_INDEX)
-        , _maxPiecesToLoad(8)
-        , _maxOutstandingPayments(4) {
+        , _maxOutstandingPayments(4)
+        , _maxPiecesToPreload(2) {
 
         // Notify any existing peers
         for(auto itr : _session->_connections) {
@@ -376,7 +376,7 @@ namespace detail {
         assert(_session->state() == SessionState::started);
         assert(c-> template inState<joystream::protocol_statemachine::ServicingPieceRequests>());
 
-        auto piecesToLoad = c->pieceDeliveryPipeline().getNextBatchToLoad(_maxPiecesToLoad);
+        auto piecesToLoad = c->pieceDeliveryPipeline().getNextBatchToLoad(_maxOutstandingPayments + _maxPiecesToPreload);
 
         for (auto index : piecesToLoad) {
           _loadPieceForBuyer(c->connectionId(), index);
