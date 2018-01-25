@@ -65,8 +65,7 @@ namespace status {
                    const CBStateMachine & machine,
                    const std::queue<uint32_t> & downloadedValidPieces)
             : connectionId(connectionId)
-            , machine(machine)
-            , downloadedValidPieces(downloadedValidPieces) {
+            , machine(machine) {
         }
 
         // Connection id
@@ -76,11 +75,6 @@ namespace status {
         CBStateMachine machine;
 
         //// Buyer
-
-        // Indexes of valid piecesm, in the order they were downloaded
-        // NB: The reason this is not in Seller, is because
-        // any peer can potentially provide valid pieces
-        std::queue<uint32_t> downloadedValidPieces;
 
         //// Selling
     };
