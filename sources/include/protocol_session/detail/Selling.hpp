@@ -54,7 +54,7 @@ public:
                         const Coin::KeyPair & contractKeyPair,
                         const Coin::PubKeyHash & finalPkHash);
 
-    // Data for given piece has been loaded
+    // Data for given piece has been loaded - arrival does not have to be in same order as request to load
     void pieceLoaded(const ConnectionIdType & id, const protocol_wire::PieceData &, int);
 
     //// Connection level state machine events
@@ -118,12 +118,20 @@ private:
     // Maximum piece
     int _MAX_PIECE_INDEX;
 
+    // Maximum number of outstanding payments allowed after which we defer sending full pieces
+    // Requests are still accepted and will be honored after pending payments arrive
+    int _maxOutstandingPayments;
+
+    // The maximum number of pieces to load and buffer. This is a measure to minimise overhead
+    // and reduce risk of peers sending too many requests without subsequent payment
+    int _maxPiecesToLoad;
+
     // Prepare given connection for deletion due to given cause, returns next valid iterator (e.g. end)
     typename detail::ConnectionMap<ConnectionIdType>::const_iterator removeConnection(const ConnectionIdType &, DisconnectCause);
 
-    // Loads. .....
-    // NB: Assumes in state protocol_statemachine::LoadingPiece
-    void tryToLoadPiece(detail::Connection<ConnectionIdType> *);
+    void tryToSendPieces(detail::Connection<ConnectionIdType> *);
+
+    void tryToLoadPieces(detail::Connection<ConnectionIdType> *);
 
     // If at least one payment is made, then send claims notification
     void tryToClaimLastPayment(detail::Connection<ConnectionIdType> *);

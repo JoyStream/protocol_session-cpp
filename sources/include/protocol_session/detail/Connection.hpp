@@ -9,8 +9,7 @@
 #define JOYSTREAM_PROTOCOLSESSION_DETAIL_CONNECTION_HPP
 
 #include <protocol_statemachine/protocol_statemachine.hpp>
-
-#include <queue>
+#include <protocol_session/detail/PieceDeliveryPipeline.hpp>
 
 namespace joystream {
 namespace protocol_wire {
@@ -78,11 +77,7 @@ namespace detail {
         // Statu of connection
         status::Connection<ConnectionIdType> status() const;
 
-        bool loadedPiecePending() const;
-        void setLoadedPiecePending(bool);
-
-        protocol_wire::PieceData loadedPieceData() const;
-        void setLoadedPieceData(const protocol_wire::PieceData &);
+        PieceDeliveryPipeline & pieceDeliveryPipeline();
 
     private:
 
@@ -94,21 +89,9 @@ namespace detail {
 
         //// Buyer
 
-        // Point in time when last invite sent
-        // NB: switch to std::chrono, and set in ctr
-        //time_t _whenLastInviteSent;
-        // std::chrono::high_resolution_clock::time_point
-
-        // Indexes of valid piecesm, in the order they were downloaded
-        // NB: The reason this is not in Seller, is because
-        // any peer can potentially provide valid pieces
-        std::queue<uint32_t> _downloadedValidPieces;
 
         //// Selling
-
-        //
-        bool _loadedPiecePending;
-        protocol_wire::PieceData _loadedPieceData;
+        PieceDeliveryPipeline _pieceDeliveryPipeline;
 
     };
 

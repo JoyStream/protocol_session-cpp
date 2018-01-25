@@ -46,8 +46,7 @@ namespace detail {
                    receivedFullPiece,
                    remoteMessageOverflow,
                    localMessageOverflow,
-                   0)
-        , _loadedPiecePending(false) {
+                   0) {
 
         // Initiating state machine
         _machine.initiate();
@@ -97,7 +96,7 @@ namespace detail {
 
     template <class ConnectionIdType>
     void Connection<ConnectionIdType>::setMaxPieceIndex(int maxPieceIndex) {
-        return _machine.setMAX_PIECE_INDEX(maxPieceIndex);
+        _machine.setMAX_PIECE_INDEX(maxPieceIndex);
     }
 
     /**
@@ -113,30 +112,13 @@ namespace detail {
                                                     status::CBStateMachine(_machine.getInnerStateTypeIndex(),
                                                                            _machine.announcedModeAndTermsFromPeer(),
                                                                            _machine.payor(),
-                                                                           _machine.payee()),
-                                                    _downloadedValidPieces);
+                                                                           _machine.payee()));
     }
 
     template <class ConnectionIdType>
-    bool Connection<ConnectionIdType>::loadedPiecePending() const {
-        return _loadedPiecePending;
+    PieceDeliveryPipeline & Connection<ConnectionIdType>::pieceDeliveryPipeline() {
+      return _pieceDeliveryPipeline;
     }
-
-    template <class ConnectionIdType>
-    void Connection<ConnectionIdType>::setLoadedPiecePending(bool loadedPiecePending) {
-        _loadedPiecePending = loadedPiecePending;
-    }
-
-    template <class ConnectionIdType>
-    protocol_wire::PieceData Connection<ConnectionIdType>::loadedPieceData() const {
-        return _loadedPieceData;
-    }
-
-    template <class ConnectionIdType>
-    void Connection<ConnectionIdType>::setLoadedPieceData(const protocol_wire::PieceData & loadedPieceData) {
-        _loadedPieceData = loadedPieceData;
-    }
-
 }
 }
 }
