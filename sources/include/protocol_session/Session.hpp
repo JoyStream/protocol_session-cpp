@@ -250,6 +250,8 @@ namespace detail {
         void sellerHasJoined(const ConnectionIdType &);
         void sellerHasInterruptedContract(const ConnectionIdType &);
         void receivedFullPiece(const ConnectionIdType &, const protocol_wire::PieceData &);
+        void remoteMessageOverflow(const ConnectionIdType &);
+        void localMessageOverflow(const ConnectionIdType &);
 
         //// Utility routines
 

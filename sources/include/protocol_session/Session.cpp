@@ -918,6 +918,22 @@ namespace protocol_session {
     }
 
     template<class ConnectionIdType>
+    void Session<ConnectionIdType>::remoteMessageOverflow(const ConnectionIdType & id) {
+
+        assert(hasConnection(id));
+        std::clog << "Error: remoteMessageOverflow on connection " << id << std::endl;
+        removeConnection(id);
+    }
+
+    template<class ConnectionIdType>
+    void Session<ConnectionIdType>::localMessageOverflow(const ConnectionIdType & id) {
+
+        assert(hasConnection(id));
+        std::clog << "Error: localMessageOverflow on connection " << id << std::endl;
+        removeConnection(id);
+    }
+
+    template<class ConnectionIdType>
     detail::Connection<ConnectionIdType> * Session<ConnectionIdType>::createConnection(const ConnectionIdType & id, const SendMessageOnConnectionCallbacks & sendMessageCallbacks) {
 
         return new detail::Connection<ConnectionIdType>(
@@ -935,8 +951,8 @@ namespace protocol_session {
         [this, id]() { this->sellerHasJoined(id); },
         [this, id]() { this->sellerHasInterruptedContract(id); },
         [this, id](const protocol_wire::PieceData & p) { this->receivedFullPiece(id, p); },
-        [this, id]() { /*this->remoteMessageOverflow(id);*/ },
-        [this, id]() { /*this->localMessageOverflow(id);*/ });
+        [this, id]() { this->remoteMessageOverflow(id); },
+        [this, id]() { this->localMessageOverflow(id); });
     }
 
     template <class ConnectionIdType>
