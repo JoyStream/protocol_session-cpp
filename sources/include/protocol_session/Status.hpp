@@ -62,8 +62,7 @@ namespace status {
         Connection() {}
 
         Connection(const ConnectionIdType & connectionId,
-                   const CBStateMachine & machine,
-                   const std::queue<uint32_t> & downloadedValidPieces)
+                   const CBStateMachine & machine)
             : connectionId(connectionId)
             , machine(machine) {
         }
