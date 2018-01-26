@@ -26,10 +26,10 @@ namespace detail {
 
     template <class ConnectionIdType>
     int Seller<ConnectionIdType>::requestPiece(int i) {
+        if(isGone())
+          throw std::runtime_error("Cannot request pieces from a disconnected seller");
 
         _piecesAwaitingArrival.push(i);
-
-        assert(!isGone());
 
         // Send request
         _connection->processEvent(protocol_statemachine::event::RequestPiece(i));
@@ -63,8 +63,7 @@ namespace detail {
 
     template <class ConnectionIdType>
     void Seller<ConnectionIdType>::pieceWasValid() {
-        // After seller is removed it should ignore all piece validation results
-        if(isGone()) return;
+        assert(!isGone());
 
         if(_numberOfPiecesAwaitingValidation == 0)
           throw std::runtime_error("seller is not expecting piece validation result");
@@ -76,8 +75,7 @@ namespace detail {
 
     template <class ConnectionIdType>
     void Seller<ConnectionIdType>::pieceWasInvalid() {
-      // After seller is removed it should ignore all piece validation results
-      if(isGone()) return;
+      assert(!isGone());
 
       if(_numberOfPiecesAwaitingValidation == 0)
         throw std::runtime_error("seller is not expecting piece validation result");

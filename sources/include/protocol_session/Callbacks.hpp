@@ -85,8 +85,9 @@ typedef protocol_statemachine::Send SendMessageOnConnectionCallbacks;
 //// Buying
 
 // Process arrival of a full piece, with given index over peer connection with given id
+// Return true if full piece was valid
 template <class ConnectionIdType>
-using FullPieceArrived = std::function<void(const ConnectionIdType &, const protocol_wire::PieceData &, int)>;
+using FullPieceArrived = std::function<bool(const ConnectionIdType &, const protocol_wire::PieceData &, int)>;
 
 // Buyer with givne connection id send a valid payment
 template <class ConnectionIdType>

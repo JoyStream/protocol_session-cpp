@@ -8,8 +8,10 @@
 #include "SessionSpy.hpp"
 
 template <class ConnectionIdType>
-SessionSpy<ConnectionIdType>::SessionSpy(Session<ConnectionIdType> * session)
-    : _session(session) {
+SessionSpy<ConnectionIdType>::SessionSpy(Session<ConnectionIdType> * session,
+                                         const std::function<bool(ConnectionIdType, protocol_wire::PieceData, int)> & fullPieceArrived)
+    : _session(session)
+    , fullPieceArrivedCallbackSlot(fullPieceArrived) {
 }
 
 template <class ConnectionIdType>

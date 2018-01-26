@@ -646,18 +646,14 @@ TEST_F(SessionTest, buying_seller_sent_invalid_piece)
         requestedPiece = m2.pieceIndex();
     }
 
-    // Send piece
-    session->processMessageOnConnection(first.id, protocol_wire::FullPiece());
     spy->reset();
 
-    //
-    session->invalidPieceReceivedOnConnection(first.id, requestedPiece);
+    // Send piece and have buyer reject it
+    defaultPieceValidationResult = false;
+    session->processMessageOnConnection(first.id, protocol_wire::FullPiece());
 
-    // assert removal
+    // The seller should have been removed for sending and invalid piece
     assertConnectionRemoved(first.id, DisconnectCause::seller_sent_invalid_piece);
-
-    // extra check that no other callback was made
-    EXPECT_TRUE(spy->onlyCalledRemovedConnection());
 
     spy->reset();
 

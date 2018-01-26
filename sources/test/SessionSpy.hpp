@@ -82,7 +82,7 @@ typedef SubroutineCallbackSlot< protocol_wire::FullPiece> SendFullPieceCallbackS
 typedef SubroutineCallbackSlot< protocol_wire::Payment> SendPaymentCallbackSlot;
 
 template <class ConnectionIdType>
-using FullPieceArrivedCallbackSlot = SubroutineCallbackSlot<ConnectionIdType, protocol_wire::PieceData, int>;
+using FullPieceArrivedCallbackSlot = FunctionCallbackSlot<bool, ConnectionIdType, protocol_wire::PieceData, int>;
 
 template <class ConnectionIdType>
 using LoadPieceForBuyerCallbackSlot = SubroutineCallbackSlot<ConnectionIdType, unsigned int>;
@@ -96,7 +96,7 @@ using AnchorAnnouncedCallbackSlot = SubroutineCallbackSlot<ConnectionIdType, uin
 template <class ConnectionIdType>
 struct ConnectionSpy {
 
-    ConnectionSpy(const ConnectionIdType & x) :id(x) {
+    ConnectionSpy(const ConnectionIdType & x) : id(x) {
         createCallbacks();
     }
 
@@ -176,7 +176,8 @@ public:
 
     // Handlers for all calls with return types is required, as slots
     // use them to return respons
-    SessionSpy(Session<ConnectionIdType> *);
+    SessionSpy(Session<ConnectionIdType> *,
+               const std::function<bool(ConnectionIdType, protocol_wire::PieceData, int)> & fullPieceArrived);
 
     ~SessionSpy();
 

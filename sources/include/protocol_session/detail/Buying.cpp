@@ -87,96 +87,35 @@ namespace detail {
     }
 
     template <class ConnectionIdType>
-    void Buying<ConnectionIdType>::validPieceReceivedOnConnection(const ConnectionIdType & id, int index) {
-        // This is a callback that normally happens some time after a piece is received and being checked for validity.
-        // Alot could have changed since. If the client doesn't maintain state correctly (especially when the same peers
-        // happen to reconnect and a session is restarted before the result of the validation from the prior session completes)
-        // it can make a call into this method that doesn't correspond to a seller connection in the current session.
-
-        // if(_session->state() == SessionState::stopped) return;
-        // if(_state != BuyingState::downloading) return;
+    void Buying<ConnectionIdType>::validPieceReceivedOnConnection(detail::Seller<ConnectionIdType> &seller, int index) {
+        // Cannot happen when stopped, as there are no connections
+        assert(_session->_state != SessionState::stopped);
+        assert(_state == BuyingState::downloading);
         assert(index >= 0);
+        assert(!seller.isGone());
 
-        detail::Piece<ConnectionIdType> & piece = _pieces[index];
+        seller.pieceWasValid();
 
-        auto itr = _sellers.find(id);
+        auto connection = seller.connection();
 
-        bool paymentSent = false;
+        const paymentchannel::Payor & payor = connection->payor();
 
-        // Try to find a matching active seller for this piece validation
-        // result to send them a payment
-        if (piece.state() == PieceState::being_validated_and_stored) {
+        _sentPayment(connection->connectionId(), payor.price(), payor.numberOfPaymentsMade(), payor.amountPaid(), index);
 
-            if(itr != _sellers.cend() && piece.connectionId() == id && _session->hasConnection(id)) {
-
-              detail::Seller<ConnectionIdType> & s = itr->second;
-
-              // if(!s.isGone() && s.isExpectingPieceValidation(index)) {
-              if (!s.isGone() && s.numberOfPiecesAwaitingValidation() > 0) {
-                  paymentSent = true;
-
-                  // Update status of seller
-                  // This results in payment being sent
-                  s.pieceWasValid();
-
-                  auto connection = _session->get(id);
-
-                  const paymentchannel::Payor & payor = connection->payor();
-
-                  _sentPayment(id, payor.price(), payor.numberOfPaymentsMade(), payor.amountPaid(), index);
-              }
-            }
-        }
-
-        // If its not already downloaded from out of bounds
-        if(piece.state() != PieceState::downloaded) {
-            // Mark as downloaded
-            piece.downloaded();
-
-            // Count downloaded piece
-            _numberOfMissingPieces--;
-        }
-
-        // Do we still have pieces which are not yet downloaded
-        if(_numberOfMissingPieces > 0) {
-
-            // If there was a matching seller, payment was sent, and we are stills started,
-            // then we try to assign more pieces to the seller
-            if(paymentSent && _session->_state == SessionState::started){
-              tryToAssignAndRequestPieces(itr->second);
-            }
-
-        } else if(_numberOfMissingPieces == 0) // otherwise we are done!
-            _state = BuyingState::download_completed;
-
+        tryToAssignAndRequestPieces(seller);
     }
 
     template <class ConnectionIdType>
-    void Buying<ConnectionIdType>::invalidPieceReceivedOnConnection(const ConnectionIdType & id, int index) {
-
-        // No state guard required, piece validation can occur
-        // after connection is gone, or even session has been stopped.
+    void Buying<ConnectionIdType>::invalidPieceReceivedOnConnection(detail::Seller<ConnectionIdType> & seller, int index) {
+        // Cannot happen when stopped, as there are no connections
+        assert(_session->_state != SessionState::stopped);
+        assert(_state == BuyingState::downloading);
         assert(index >= 0);
+        assert(!seller.isGone());
 
-        detail::Piece<ConnectionIdType> & piece = _pieces[index];
+        seller.pieceWasInvalid();
 
-        auto itr = _sellers.find(id);
-
-        // Try to find a matching active seller for this piece validation result
-        if (piece.state() == PieceState::being_validated_and_stored) {
-
-            if(itr != _sellers.cend() && piece.connectionId() == id && _session->hasConnection(id)) {
-
-              detail::Seller<ConnectionIdType> & s = itr->second;
-
-              // if(!s.isGone() && s.isExpectingPieceValidation(index)) {
-              if (!s.isGone() && s.numberOfPiecesAwaitingValidation() > 0) {
-                  // Update status of seller
-                  s.pieceWasInvalid();
-                  removeConnection(id, DisconnectCause::seller_sent_invalid_piece);
-              }
-            }
-        }
+        removeConnection(seller.connection()->connectionId(), DisconnectCause::seller_sent_invalid_piece);
     }
 
     template <class ConnectionIdType>
@@ -249,25 +188,21 @@ namespace detail {
 
         detail::Seller<ConnectionIdType> & s = itr->second;
 
-        // Update state and get piece index
+        // Update state and get expected piece index
         int index = s.fullPieceArrived();
 
         detail::Piece<ConnectionIdType> & piece = _pieces[index];
 
         piece.arrived();
 
-        /**
-        // NB: let client deal with this for now
-        // Check that this is correct length
-        if(p.length() != piece.size()) {
+        // Notify client - client should immediatly validate the piece and return result of validation
+        bool wasValid = _fullPieceArrived(id, p, index);
 
-            // 1) tell client
-            // 2) remove connection
+        if (wasValid) {
+          validPieceReceivedOnConnection(s, index);
+        } else {
+          invalidPieceReceivedOnConnection(s, index);
         }
-        */
-
-        // Notify client
-        _fullPieceArrived(id, p, index);
     }
 
     template <class ConnectionIdType>

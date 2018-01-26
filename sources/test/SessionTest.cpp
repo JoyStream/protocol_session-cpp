@@ -22,7 +22,8 @@ namespace protocol_session {
 SessionTest::SessionTest()
     : //network(Coin::Network::testnet3)
     session(nullptr)
-    , spy(nullptr) {
+    , spy(nullptr)
+    , defaultPieceValidationResult(true) {
 }
 
 void SessionTest::init() {
@@ -34,6 +35,11 @@ void SessionTest::init() {
 
     spy = new
     SessionSpy<ID>(
+      session,
+
+      [this](ID, protocol_wire::PieceData data, int index) -> bool {
+        return defaultPieceValidationResult;
+      }
                 /**
     [this](const P2SHScriptGeneratorFromPubKey & scriptGenerator, const uchar_vector &) -> Coin::KeyPair {
 
@@ -67,7 +73,7 @@ void SessionTest::init() {
         return addresses;
 
     },*/
-    session);
+    );
 }
 
 void SessionTest::cleanup() {
@@ -489,9 +495,6 @@ void SessionTest::completeExchange(SellerPeer & peer) {
         EXPECT_EQ(id, peer.id);
         EXPECT_EQ(receivedData, dataSent);
         EXPECT_EQ(index, requestedPiece);
-
-        // tell session that it was valid
-        session->validPieceReceivedOnConnection(peer.id, index);
 
         // clear call
         spy->fullPieceArrivedCallbackSlot.clear();

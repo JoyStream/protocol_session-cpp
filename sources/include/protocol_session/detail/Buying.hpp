@@ -62,13 +62,6 @@ public:
     void startDownloading(const Coin::Transaction & contractTx,
                           const PeerToStartDownloadInformationMap<ConnectionIdType> & peerToStartDownloadInformationMap);
 
-    // A valid piece was sent to us on given connection
-    void validPieceReceivedOnConnection(const ConnectionIdType &, int index);
-
-    // An invalid piece was sent to us on given connection
-    // Should not be called when session is stopped.
-    void invalidPieceReceivedOnConnection(const ConnectionIdType &, int index);
-
     //// Connection level state machine events
 
     void peerAnnouncedModeAndTerms(const ConnectionIdType &, const protocol_statemachine::AnnouncedModeAndTerms &);
@@ -140,6 +133,12 @@ private:
 
     // Unguarded
     void _start();
+
+    // A valid piece was sent to us on given connection
+    void validPieceReceivedOnConnection(detail::Seller<ConnectionIdType> &, int index);
+
+    // An invalid piece was sent to us on given connection
+    void invalidPieceReceivedOnConnection(detail::Seller<ConnectionIdType> &, int index);
 
     //// Members
 

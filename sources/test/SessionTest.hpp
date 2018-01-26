@@ -36,6 +36,9 @@ public:
     Session<ID> * session;
     SessionSpy<ID> * spy;
 
+    // The validation result value returned when a full pieces arrives - initialized to true
+    bool defaultPieceValidationResult;
+
     // Integer value used to generate a key in nextPrivateKey()
     uint nextKey;
     // Generates private key which is 32 byte unsigned integer encoded i

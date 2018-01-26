@@ -155,12 +155,6 @@ namespace detail {
                               const PeerToStartDownloadInformationMap<ConnectionIdType> & peerToStartDownloadInformationMap,
                               const PickNextPieceMethod<ConnectionIdType> & pickNextPieceMethod);
 
-        // A valid piece was sent too us on given connection
-        void validPieceReceivedOnConnection(const ConnectionIdType &, int index);
-
-        // An invalid piece was sent too us on given connection
-        void invalidPieceReceivedOnConnection(const ConnectionIdType &, int index);
-
         // Piece with given index has been downloaded, but not through
         // a regitered connection. Could be non-joystream peers, or something out of bounds.
         void pieceDownloaded(int);
