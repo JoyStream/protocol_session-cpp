@@ -129,7 +129,7 @@ TEST_F(SessionTest, selling)
 
     // Load piece, without it being sent
     protocol_wire::PieceData data;
-    session->pieceLoaded(peer, data, numberOfExchangesWhileStarted);
+    session->pieceLoaded(data, numberOfExchangesWhileStarted);
 
     EXPECT_TRUE(spy->blankSession());
     ConnectionSpy<ID> * c = spy->connectionSpies.at(peer);
@@ -150,13 +150,13 @@ TEST_F(SessionTest, selling)
     receiveValidFullPieceRequest(peer, numberOfExchangesWhileStarted + 2);
 
     // Load pieces out of order
-    session->pieceLoaded(peer, second, numberOfExchangesWhileStarted + 2);
+    session->pieceLoaded(second, numberOfExchangesWhileStarted + 2);
 
     // Should not send any pieces yet - first piece not yet loaded
     EXPECT_EQ((int)c->sendFullPieceCallbackSlot.size(), 0);
 
     // Load remaining piece
-    session->pieceLoaded(peer, first, numberOfExchangesWhileStarted + 1);
+    session->pieceLoaded(first, numberOfExchangesWhileStarted + 1);
 
     // Two pieces should have been sent in correct order
     assertFullPieceSent(peer, {first, second});

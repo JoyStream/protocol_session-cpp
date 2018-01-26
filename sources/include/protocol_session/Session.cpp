@@ -624,7 +624,7 @@ namespace protocol_session {
     }
 
     template<class ConnectionIdType>
-    void Session<ConnectionIdType>::pieceLoaded(const ConnectionIdType & id, const protocol_wire::PieceData & data, int index) {
+    void Session<ConnectionIdType>::pieceLoaded(const protocol_wire::PieceData & data, int index) {
 
         switch(_mode) {
 
@@ -647,7 +647,7 @@ namespace protocol_session {
             case SessionMode::selling:
 
                 assert(_observing == nullptr && _buying == nullptr && _selling != nullptr);
-                _selling->pieceLoaded(id, data, index);
+                _selling->pieceLoaded(data, index);
                 break;
 
             default:

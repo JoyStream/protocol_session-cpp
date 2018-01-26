@@ -185,7 +185,7 @@ namespace detail {
                             const Coin::PubKeyHash & finalPkHash);
 
         // Data for given piece has been loaded
-        void pieceLoaded(const ConnectionIdType &, const protocol_wire::PieceData &, int);
+        void pieceLoaded(const protocol_wire::PieceData &, int);
 
         // Update terms when selling
         void updateTerms(const protocol_wire::SellerTerms &);

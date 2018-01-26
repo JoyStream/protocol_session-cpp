@@ -106,24 +106,25 @@ namespace detail {
     }
 
     template<class ConnectionIdType>
-    void Selling<ConnectionIdType>::pieceLoaded(const ConnectionIdType & id, const protocol_wire::PieceData & data, int index) {
-        if (!_session->hasConnection(id)) return;
+    void Selling<ConnectionIdType>::pieceLoaded(const protocol_wire::PieceData & data, int index) {
 
-        // We cannot have connection and be stopped
-        assert(_session->state() != SessionState::stopped);
+        if(_session->state() == SessionState::stopped)
+          return;
 
-        // Get connection state
-        detail::Connection<ConnectionIdType> * c = _session->get(id);
+        // Go through all buyer connections we are servicing and fill their delivery pipeline
+        for(auto m : _session->_connections) {
+          detail::Connection<ConnectionIdType> * c = m.second;
 
-        // Make sure connection is still in appropriate state
-        if(!c-> template inState<joystream::protocol_statemachine::ServicingPieceRequests>())
-            return;
+          // Make sure connection is still in appropriate state
+          if(!c-> template inState<joystream::protocol_statemachine::ServicingPieceRequests>())
+              continue;
 
-        c->pieceDeliveryPipeline().dataReady(index, data);
+          c->pieceDeliveryPipeline().dataReady(index, data);
 
-        // If we are started, then send off
-        if(_session->state() == SessionState::started) {
-            tryToSendPieces(c);
+          // If we are started, then send off
+          if(_session->state() == SessionState::started) {
+              tryToSendPieces(c);
+          }
         }
     }
 

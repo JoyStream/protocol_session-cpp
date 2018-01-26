@@ -30,7 +30,7 @@ int PieceDeliveryPipeline::dataReady(int index, const protocol_wire::PieceData &
     // We may not find any matching pieces in the pipeline if the call
     // was delayed, we recieve a polite payment, or just called in error. But we will not treat it as a critical error.
     //
-    if (p.index == index && p.inState<Piece::Loading>()) {
+    if (p.index == index && (p.inState<Piece::Loading>() || p.inState<Piece::NotRequested>())) {
       // Update the piece state and save the piece data
       auto readyToSend = Piece::ReadyToSend();
 
@@ -39,12 +39,10 @@ int PieceDeliveryPipeline::dataReady(int index, const protocol_wire::PieceData &
       p.state = readyToSend;
 
       piecesUpdated++;
-      // we don't return.. there may be another piece in the pipeline for the same index
-      // this is wasteful but allowed.
     }
   }
 
-  // explain what it means for piecesUpdates == 0
+  // explain what it means for piecesUpdated == 0
 
   return piecesUpdated;
 }

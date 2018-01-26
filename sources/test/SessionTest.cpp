@@ -421,7 +421,7 @@ void SessionTest::receiveValidFullPieceRequest(ID peer, int pieceIndexToRequest)
 }
 
 void SessionTest::sendFullPiece(ID id, const protocol_wire::PieceData & data, int pieceIndex) {
-    session->pieceLoaded(id, data, pieceIndex);
+    session->pieceLoaded(data, pieceIndex);
 
     EXPECT_TRUE(spy->blankSession());
 

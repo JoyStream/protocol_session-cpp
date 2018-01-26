@@ -55,7 +55,7 @@ public:
                         const Coin::PubKeyHash & finalPkHash);
 
     // Data for given piece has been loaded - arrival does not have to be in same order as request to load
-    void pieceLoaded(const ConnectionIdType & id, const protocol_wire::PieceData &, int);
+    void pieceLoaded(const protocol_wire::PieceData &, int);
 
     //// Connection level state machine events
 
