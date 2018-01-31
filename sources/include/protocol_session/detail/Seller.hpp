@@ -79,6 +79,11 @@ namespace detail {
         // This is effectively the time the first piece request is sent, and updated on arrival of a piece
         // This is used to determine if servicing the next piece has timed out.
         std::chrono::high_resolution_clock::time_point _frontPieceEarliestExpectedArrival;
+
+        // Point in time when requests began. This is reset when the queue is drained and requests restart
+        // We use this reference point to allow a small window of time for the seller to service pieces
+        // and can't be considered to be be timed out.
+        std::chrono::high_resolution_clock::time_point _servicingStartedAt;
     };
 
 }

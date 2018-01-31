@@ -31,6 +31,7 @@ namespace detail {
 
         if (_piecesAwaitingArrival.size() == 0) {
           _frontPieceEarliestExpectedArrival = std::chrono::high_resolution_clock::now();
+          _servicingStartedAt = _frontPieceEarliestExpectedArrival;
         }
 
         _piecesAwaitingArrival.push(i);
@@ -128,6 +129,11 @@ namespace detail {
 
         // Get current time
         auto now = std::chrono::high_resolution_clock::now();
+
+        // Allow seller short window of time before we really test for timeouts
+        if ((now - _servicingStartedAt) < std::chrono::seconds(10)) {
+          return false;
+        }
 
         // Whether time limit was exceeded
         return (now - _frontPieceEarliestExpectedArrival) > timeOutLimit;
