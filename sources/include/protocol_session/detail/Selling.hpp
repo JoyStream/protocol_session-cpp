@@ -68,6 +68,7 @@ public:
     void paymentInterrupted(const ConnectionIdType &);
     void receivedValidPayment(const ConnectionIdType &, const Coin::Signature &);
     void receivedInvalidPayment(const ConnectionIdType &, const Coin::Signature &);
+    void remoteMessageOverflow(const ConnectionIdType &);
 
     //// Change mode
 

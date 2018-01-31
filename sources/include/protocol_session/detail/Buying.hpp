@@ -71,6 +71,7 @@ public:
     void sellerHasJoined(const ConnectionIdType &);
     void sellerHasInterruptedContract(const ConnectionIdType &);
     void receivedFullPiece(const ConnectionIdType &, const protocol_wire::PieceData &);
+    void remoteMessageOverflow(const ConnectionIdType &);
 
     //// Change mode
 

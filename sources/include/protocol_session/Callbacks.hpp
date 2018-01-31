@@ -50,6 +50,8 @@ enum class DisconnectCause {
 
     seller_sent_invalid_piece,
 
+    seller_message_overflow,
+
     //// selling
 
     //buyer_invited_with_bad_terms,
@@ -58,7 +60,9 @@ enum class DisconnectCause {
 
     buyer_interrupted_payment,
 
-    buyer_sent_invalid_payment
+    buyer_sent_invalid_payment,
+
+    buyer_message_overflow
 };
 
 // Removal of a connection from the session: c++11 alias declaration

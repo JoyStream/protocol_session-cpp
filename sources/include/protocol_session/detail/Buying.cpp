@@ -219,6 +219,12 @@ namespace detail {
         }
     }
 
+    template<class ConnectionIdType>
+    void Buying<ConnectionIdType>::remoteMessageOverflow(const ConnectionIdType & id) {
+      std::clog << "Error: remoteMessageOverflow from seller connection " << id << std::endl;
+      removeConnection(id, DisconnectCause::seller_message_overflow);
+    }
+
     template <class ConnectionIdType>
     void Buying<ConnectionIdType>::leavingState() {
 

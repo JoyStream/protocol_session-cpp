@@ -885,16 +885,22 @@ namespace protocol_session {
     void Session<ConnectionIdType>::remoteMessageOverflow(const ConnectionIdType & id) {
 
         assert(hasConnection(id));
-        std::clog << "Error: remoteMessageOverflow on connection " << id << std::endl;
-        removeConnection(id);
+
+        if (_buying != nullptr) {
+          _buying->remoteMessageOverflow(id);
+        } else if (_selling != nullptr) {
+          _selling->remoteMessageOverflow(id);
+        }
     }
 
     template<class ConnectionIdType>
     void Session<ConnectionIdType>::localMessageOverflow(const ConnectionIdType & id) {
-
+        // This callback will come from the connection state machine if we try to send too many payments
+        // or as a seller, too many pieces.
+        // This should not happen if our implementation is correct
         assert(hasConnection(id));
         std::clog << "Error: localMessageOverflow on connection " << id << std::endl;
-        removeConnection(id);
+        assert(false);
     }
 
     template<class ConnectionIdType>

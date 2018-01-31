@@ -263,6 +263,13 @@ namespace detail {
     }
 
     template<class ConnectionIdType>
+    void Selling<ConnectionIdType>::remoteMessageOverflow(const ConnectionIdType & id) {
+      std::clog << "Error: remoteMessageOverflow from buyer connection " << id << std::endl;
+
+      removeConnection(id, DisconnectCause::buyer_message_overflow);
+    }
+
+    template<class ConnectionIdType>
     void Selling<ConnectionIdType>::leavingState() {
 
         //// Mode change is allowed in all session states
