@@ -29,6 +29,10 @@ namespace detail {
         if(isGone())
           throw std::runtime_error("Cannot request pieces from a disconnected seller");
 
+        if (_piecesAwaitingArrival.size() == 0) {
+          _frontPieceEarliestExpectedArrival = std::chrono::high_resolution_clock::now();
+        }
+
         _piecesAwaitingArrival.push(i);
 
         // Send request
@@ -50,6 +54,10 @@ namespace detail {
         _piecesAwaitingArrival.pop();
 
         _numberOfPiecesAwaitingValidation++;
+
+        if (_piecesAwaitingArrival.size() > 0) {
+          _frontPieceEarliestExpectedArrival = std::chrono::high_resolution_clock::now();
+        }
 
         return index;
     }
@@ -110,6 +118,19 @@ namespace detail {
     template <class ConnectionIdType>
     int Seller<ConnectionIdType>::numberOfPiecesAwaitingValidation() const {
       return _numberOfPiecesAwaitingValidation;
+    }
+
+    template <class ConnectionIdType>
+    bool Seller<ConnectionIdType>::servicingPieceHasTimedOut(const std::chrono::duration<double> & timeOutLimit) const{
+
+        if(_piecesAwaitingArrival.size() == 0)
+            return false;
+
+        // Get current time
+        auto now = std::chrono::high_resolution_clock::now();
+
+        // Whether time limit was exceeded
+        return (now - _frontPieceEarliestExpectedArrival) > timeOutLimit;
     }
 }
 }

@@ -58,6 +58,9 @@ public:
     // Remove connection
     void removeConnection(const ConnectionIdType &);
 
+    // Disconnect seller connections if it has taken longer than `limit` to service next expected piece
+    void disconnectSlowSellers(const std::chrono::duration<double> & limit);
+
     // Transition to BuyingState::sending_invitations
     void startDownloading(const Coin::Transaction & contractTx,
                           const PeerToStartDownloadInformationMap<ConnectionIdType> & peerToStartDownloadInformationMap);

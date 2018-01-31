@@ -63,6 +63,8 @@ namespace detail {
 
         bool isGone() const  { return _connection == nullptr; }
 
+        bool servicingPieceHasTimedOut(const std::chrono::duration<double> &) const;
+
     private:
 
         // Connection identifier for seller
@@ -72,6 +74,11 @@ namespace detail {
         std::queue<int> _piecesAwaitingArrival;
 
         int _numberOfPiecesAwaitingValidation;
+
+        // The earliest time the piece at the front of the queue is expected to arrive
+        // This is effectively the time the first piece request is sent, and updated on arrival of a piece
+        // This is used to determine if servicing the next piece has timed out.
+        std::chrono::high_resolution_clock::time_point _frontPieceEarliestExpectedArrival;
     };
 
 }

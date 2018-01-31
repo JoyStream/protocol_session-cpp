@@ -434,6 +434,37 @@ namespace protocol_session {
     }
 
     template<class ConnectionIdType>
+    void Session<ConnectionIdType>::disconnectSlowSellers(const std::chrono::duration<double> & limit) {
+      switch(_mode) {
+
+          case SessionMode::not_set:
+
+              assert(_observing == nullptr && _buying == nullptr && _selling == nullptr);
+              throw exception::SessionModeNotSetException();
+              break;
+
+          case SessionMode::observing:
+
+              assert(_observing != nullptr && _buying == nullptr && _selling == nullptr);
+              break;
+
+          case SessionMode::buying:
+
+              assert(_observing == nullptr && _buying != nullptr && _selling == nullptr);
+              _buying->disconnectSlowSellers(limit);
+              break;
+
+          case SessionMode::selling:
+
+              assert(_observing == nullptr && _buying == nullptr && _selling != nullptr);
+              break;
+
+          default:
+              assert(false);
+      }
+    }
+
+    template<class ConnectionIdType>
     status::Connection<ConnectionIdType> Session<ConnectionIdType>::connectionStatus(const ConnectionIdType & id) const noexcept {
 
         if(_mode == SessionMode::not_set)

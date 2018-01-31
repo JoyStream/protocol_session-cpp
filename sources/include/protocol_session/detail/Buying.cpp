@@ -87,6 +87,20 @@ namespace detail {
     }
 
     template <class ConnectionIdType>
+    void Buying<ConnectionIdType>::disconnectSlowSellers(const std::chrono::duration<double> & limit) {
+
+      for(auto mapping : _sellers) {
+        auto seller = mapping.second;
+
+        if (seller.isGone()) continue;
+
+        if (seller.servicingPieceHasTimedOut(limit)) {
+          removeConnection(seller.connection()->connectionId(), DisconnectCause::seller_servicing_piece_has_timed_out);
+        }
+      }
+    }
+
+    template <class ConnectionIdType>
     void Buying<ConnectionIdType>::validPieceReceivedOnConnection(detail::Seller<ConnectionIdType> &seller, int index) {
         // Cannot happen when stopped, as there are no connections
         assert(_session->_state != SessionState::stopped);

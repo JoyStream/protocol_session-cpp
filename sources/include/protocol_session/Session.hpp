@@ -120,6 +120,8 @@ namespace detail {
         // Remove connection if one exists with given id, otherwise returns false.
         bool removeConnection(const ConnectionIdType &);
 
+        void disconnectSlowSellers(const std::chrono::duration<double> & limit);
+
         // *** TEMPORARY FIX ***
 
         /**
