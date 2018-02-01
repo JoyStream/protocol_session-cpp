@@ -8,8 +8,6 @@
 #ifndef JOYSTREAM_PROTOCOLSESSION_SELLER_HPP
 #define JOYSTREAM_PROTOCOLSESSION_SELLER_HPP
 
-#include <protocol_session/SellerState.hpp>
-
 #include <string>
 #include <cstdlib>
 
@@ -31,56 +29,61 @@ namespace detail {
 
         Seller();
 
-        Seller(SellerState , Connection<ConnectionIdType> * , uint32_t);
+        Seller(Connection<ConnectionIdType> *);
 
-        // When seller is not assigned a piece, this routine
-        // can be used to assing piece to seller and send request to peer
-        void requestPiece(int i);
+        // Used to request a piece for from the peer, returns total number of pieces awaiting arrival
+        // Returned value helps caller to determine wether to make additional requests
+        int requestPiece(int i);
 
-        // Whether
-        bool servicingPieceHasTimedOut(const std::chrono::duration<double> &) const;
+        std::queue<int> piecesAwaitingArrival() const;
 
-        // Update state to reflect that a recently arrived full piece from this
-        // seller is being processed (verified and
-        void fullPieceArrived();
+        int numberOfPiecesAwaitingValidation() const;
+
+        // Update state to reflect that a recently arrived full piece from this peer is being verified
+        // We expect the pieces to arrive in same order they were requested. Returns the expected index of the piece
+        // which arrived
+        int fullPieceArrived();
 
         // Seller has been removed
         void removed();
 
         // Result of validating piece received from this seller
-        bool pieceWasValid();
+        void pieceWasValid();
 
         // Result of validating piece received from this seller
         void pieceWasInvalid();
 
-        // Whether a piece was recently received
+        // Returns true ff there are any pieces pending arrival or waiting to be validated
         bool isPossiblyOwedPayment() const;
 
         // Status of seller
         status::Seller<ConnectionIdType> status() const;
 
-        // Getters
-        SellerState state() const;
-
         Connection<ConnectionIdType> * connection() const;
 
-        int indexOfAssignedPiece() const;
+        bool isGone() const  { return _connection == nullptr; }
+
+        bool servicingPieceHasTimedOut(const std::chrono::duration<double> &) const;
 
     private:
-
-        // State of this seller
-        SellerState _state;
 
         // Connection identifier for seller
         Connection<ConnectionIdType> * _connection;
 
-        // When _state == State::waiting_for_full_piece,
-        // waiting_for_piece_validation_and_storage
-        int _indexOfAssignedPiece;
+        // Pieces we are expecting from peer in order they were requested
+        std::queue<int> _piecesAwaitingArrival;
 
-        // When last piece was assigned to this seller.
-        // Is used to identify slow seller.
-        std::chrono::high_resolution_clock::time_point _whenLastPieceAssigned;
+        int _numberOfPiecesAwaitingValidation;
+
+        // The earliest time the piece at the front of the queue is expected to arrive
+        // This is effectively the time the first piece request is sent, and updated on arrival of a piece
+        // This is used to determine if servicing the next piece has timed out.
+        std::chrono::high_resolution_clock::time_point _frontPieceEarliestExpectedArrival;
+
+        // Point in time when requests began. This is reset when the queue is drained and requests restart
+        // We use this reference point to allow a small window of time for the seller to service pieces
+        // and can't be considered to be be timed out.
+        std::chrono::high_resolution_clock::time_point _servicingStartedAt;
     };
 
 }

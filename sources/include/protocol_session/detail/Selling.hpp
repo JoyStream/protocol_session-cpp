@@ -54,8 +54,8 @@ public:
                         const Coin::KeyPair & contractKeyPair,
                         const Coin::PubKeyHash & finalPkHash);
 
-    // Data for given piece has been loaded
-    void pieceLoaded(const ConnectionIdType & id, const protocol_wire::PieceData &, int);
+    // Data for given piece has been loaded - arrival does not have to be in same order as request to load
+    void pieceLoaded(const protocol_wire::PieceData &, int);
 
     //// Connection level state machine events
 
@@ -68,6 +68,7 @@ public:
     void paymentInterrupted(const ConnectionIdType &);
     void receivedValidPayment(const ConnectionIdType &, const Coin::Signature &);
     void receivedInvalidPayment(const ConnectionIdType &, const Coin::Signature &);
+    void remoteMessageOverflow(const ConnectionIdType &);
 
     //// Change mode
 
@@ -118,12 +119,24 @@ private:
     // Maximum piece
     int _MAX_PIECE_INDEX;
 
+    // Maximum number of pieces we will send before we defer sending pieces.
+    // Requests are still accepted and will be honored after pending payments arrive.
+    // The optimim value depends on many factors such as piece size and connection latency with a peer.
+    // For now value is hardcoded to 4
+    const int _maxOutstandingPayments;
+
+    // To avoid wasting resources we limit the number of pieces that will be loaded but not sent to _maxPiecesToPreload
+    // So the total number of pieces for we will try to load data for is _maxOutstandingPayments + _maxPiecesToPreload
+    // The optimim value depends on many factors such as piece size and connection latency with a peer.
+    // For now value is hardcoded to 2
+    const int _maxPiecesToPreload;
+
     // Prepare given connection for deletion due to given cause, returns next valid iterator (e.g. end)
     typename detail::ConnectionMap<ConnectionIdType>::const_iterator removeConnection(const ConnectionIdType &, DisconnectCause);
 
-    // Loads. .....
-    // NB: Assumes in state protocol_statemachine::LoadingPiece
-    void tryToLoadPiece(detail::Connection<ConnectionIdType> *);
+    void tryToSendPieces(detail::Connection<ConnectionIdType> *);
+
+    void tryToLoadPieces(detail::Connection<ConnectionIdType> *);
 
     // If at least one payment is made, then send claims notification
     void tryToClaimLastPayment(detail::Connection<ConnectionIdType> *);

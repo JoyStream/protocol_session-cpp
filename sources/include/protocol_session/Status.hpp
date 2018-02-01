@@ -9,7 +9,6 @@
 #define JOYSTREAM_PROTOCOLSESSION_STATUS
 
 #include <protocol_session/PieceState.hpp>
-#include <protocol_session/SellerState.hpp>
 #include <protocol_session/BuyingState.hpp>
 #include <protocol_session/SessionMode.hpp>
 #include <protocol_session/SessionState.hpp>
@@ -63,11 +62,9 @@ namespace status {
         Connection() {}
 
         Connection(const ConnectionIdType & connectionId,
-                   const CBStateMachine & machine,
-                   const std::queue<uint32_t> & downloadedValidPieces)
+                   const CBStateMachine & machine)
             : connectionId(connectionId)
-            , machine(machine)
-            , downloadedValidPieces(downloadedValidPieces) {
+            , machine(machine) {
         }
 
         // Connection id
@@ -77,11 +74,6 @@ namespace status {
         CBStateMachine machine;
 
         //// Buyer
-
-        // Indexes of valid piecesm, in the order they were downloaded
-        // NB: The reason this is not in Seller, is because
-        // any peer can potentially provide valid pieces
-        std::queue<uint32_t> downloadedValidPieces;
 
         //// Selling
     };
@@ -115,13 +107,9 @@ namespace status {
 
         Seller() {}
 
-        Seller(SellerState state, ConnectionIdType connection)
-            : state(state)
-            , connection(connection) {
+        Seller(ConnectionIdType connection)
+            : connection(connection) {
         }
-
-        // State of this seller
-        SellerState state;
 
         // Connection identifier for seller
         ConnectionIdType connection;

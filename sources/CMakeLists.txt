@@ -16,6 +16,7 @@ set(
   library_sources
     src/PieceInformation.cpp
     src/common.cpp
+    src/PieceDeliveryPipeline.cpp
 )
 
 # === build library ===

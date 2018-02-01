@@ -13,114 +13,97 @@ namespace protocol_session {
 namespace detail {
 
     template <class ConnectionIdType>
-    Seller<ConnectionIdType>::Seller()
-        : _state(SellerState::waiting_to_be_assigned_piece)
-        , _connection(nullptr)
-        , _indexOfAssignedPiece(0){
+    Seller<ConnectionIdType>::Seller() :
+        _connection(nullptr),
+        _numberOfPiecesAwaitingValidation(0) {
     }
 
     template <class ConnectionIdType>
-    Seller<ConnectionIdType>::Seller(SellerState state, Connection<ConnectionIdType> * connection, uint32_t indexOfAssignedPiece)
-        : _state(state)
-        , _connection(connection)
-        , _indexOfAssignedPiece(indexOfAssignedPiece) {
+    Seller<ConnectionIdType>::Seller(Connection<ConnectionIdType> * connection) :
+        _connection(connection),
+        _numberOfPiecesAwaitingValidation(0) {
     }
 
     template <class ConnectionIdType>
-    void Seller<ConnectionIdType>::requestPiece(int i) {
+    int Seller<ConnectionIdType>::requestPiece(int i) {
+        if(isGone())
+          throw std::runtime_error("Cannot request pieces from a disconnected seller");
 
-        assert(_state == SellerState::waiting_to_be_assigned_piece);
+        if (_piecesAwaitingArrival.size() == 0) {
+          _frontPieceEarliestExpectedArrival = std::chrono::high_resolution_clock::now();
+          _servicingStartedAt = _frontPieceEarliestExpectedArrival;
+        }
 
-        _state = SellerState::waiting_for_full_piece;
-        _indexOfAssignedPiece = i;
-
-        // Note piece assignment time, so we later can detect time outs
-        _whenLastPieceAssigned = std::chrono::high_resolution_clock::now();
+        _piecesAwaitingArrival.push(i);
 
         // Send request
-        assert(_connection != nullptr);
         _connection->processEvent(protocol_statemachine::event::RequestPiece(i));
+
+        return _piecesAwaitingArrival.size();
     }
 
     template <class ConnectionIdType>
-    bool Seller<ConnectionIdType>::servicingPieceHasTimedOut(const std::chrono::duration<double> & timeOutLimit) const{
+    int Seller<ConnectionIdType>::fullPieceArrived() {
+        // Can't happen if there is no connection
+        assert(!isGone());
 
-        if(_state != SellerState::waiting_for_full_piece)
-            return false;
+        // Connection statemachine prevents overflows
+        assert(_piecesAwaitingArrival.size() > 0);
 
-        // Get current time
-        auto now = std::chrono::high_resolution_clock::now(); //time(0);
+        int index = _piecesAwaitingArrival.front();
 
-        // Whether time limit was exceeded
-        return (now - _whenLastPieceAssigned) > timeOutLimit;
-    }
+        _piecesAwaitingArrival.pop();
 
-    template <class ConnectionIdType>
-    void Seller<ConnectionIdType>::fullPieceArrived() {
+        _numberOfPiecesAwaitingValidation++;
 
-        assert(_state == SellerState::waiting_for_full_piece);
-        _state = SellerState::waiting_for_piece_validation_and_storage;
+        if (_piecesAwaitingArrival.size() > 0) {
+          _frontPieceEarliestExpectedArrival = std::chrono::high_resolution_clock::now();
+        }
+
+        return index;
     }
 
     template <class ConnectionIdType>
     void Seller<ConnectionIdType>::removed() {
-        _state = SellerState::gone;
         _connection = nullptr;
+        _piecesAwaitingArrival = std::queue<int>();
+        _numberOfPiecesAwaitingValidation = 0;
     }
 
     template <class ConnectionIdType>
-    bool Seller<ConnectionIdType>::pieceWasValid() {
+    void Seller<ConnectionIdType>::pieceWasValid() {
+        assert(!isGone());
 
-        assert(
-               // when a polite seller removal happens, even though piece processing
-               // in client is not done.
-               _state == SellerState::waiting_for_piece_validation_and_storage
-               ||
-               // when waiting for this piece to arrive.
-               _state == SellerState::waiting_for_full_piece
-               );
+        if(_numberOfPiecesAwaitingValidation == 0)
+          throw std::runtime_error("seller is not expecting piece validation result");
 
-        // Update state
-        _state = SellerState::waiting_to_be_assigned_piece;
+        _numberOfPiecesAwaitingValidation--;
 
-        // Make payment if connection exists
-        if(_connection != nullptr) {
-
-            _connection->processEvent(protocol_statemachine::event::SendPayment());
-
-            return true;
-        } else
-            return false;
+        _connection->processEvent(protocol_statemachine::event::SendPayment());
     }
 
     template <class ConnectionIdType>
     void Seller<ConnectionIdType>::pieceWasInvalid() {
+      assert(!isGone());
 
-        assert(_state == SellerState::waiting_for_piece_validation_and_storage);
+      if(_numberOfPiecesAwaitingValidation == 0)
+        throw std::runtime_error("seller is not expecting piece validation result");
 
-        // We dont update state here, caller decides: for now we dont need new state
-        // for this, as connection is immediately removed.
+      _numberOfPiecesAwaitingValidation--;
 
-        // Trigger callback to session and terminate state machine
-        if(_connection != nullptr)
-            _connection->processEvent(protocol_statemachine::event::InvalidPieceReceived());
+      // Trigger callback to session and terminate state machine
+      // After seller is removed it is no longer responsible to handle validation results
+      _connection->processEvent(protocol_statemachine::event::InvalidPieceReceived());
     }
 
     template <class ConnectionIdType>
     bool Seller<ConnectionIdType>::isPossiblyOwedPayment() const {
-        return _state == SellerState::waiting_for_piece_validation_and_storage ||
-               _state == SellerState::waiting_for_full_piece;
+        return _piecesAwaitingArrival.size() > 0 || _numberOfPiecesAwaitingValidation > 0;
     }
 
     template <class ConnectionIdType>
     typename status::Seller<ConnectionIdType> Seller<ConnectionIdType>::status() const {
-        return status::Seller<ConnectionIdType>(_state,
-                                                _connection->connectionId());
-    }
-
-    template <class ConnectionIdType>
-    SellerState Seller<ConnectionIdType>::state() const {
-        return _state;
+        return status::Seller<ConnectionIdType>(_connection->connectionId());
     }
 
     template <class ConnectionIdType>
@@ -129,10 +112,32 @@ namespace detail {
     }
 
     template <class ConnectionIdType>
-    int Seller<ConnectionIdType>::indexOfAssignedPiece() const {
-        return _indexOfAssignedPiece;
+    std::queue<int> Seller<ConnectionIdType>::piecesAwaitingArrival() const {
+      return _piecesAwaitingArrival;
     }
 
+    template <class ConnectionIdType>
+    int Seller<ConnectionIdType>::numberOfPiecesAwaitingValidation() const {
+      return _numberOfPiecesAwaitingValidation;
+    }
+
+    template <class ConnectionIdType>
+    bool Seller<ConnectionIdType>::servicingPieceHasTimedOut(const std::chrono::duration<double> & timeOutLimit) const{
+
+        if(_piecesAwaitingArrival.size() == 0)
+            return false;
+
+        // Get current time
+        auto now = std::chrono::high_resolution_clock::now();
+
+        // Allow seller short window of time before we really test for timeouts
+        if ((now - _servicingStartedAt) < std::chrono::seconds(10)) {
+          return false;
+        }
+
+        // Whether time limit was exceeded
+        return (now - _frontPieceEarliestExpectedArrival) > timeOutLimit;
+    }
 }
 }
 }

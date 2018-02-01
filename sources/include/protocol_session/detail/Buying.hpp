@@ -47,7 +47,8 @@ public:
            const FullPieceArrived<ConnectionIdType> &,
            const SentPayment<ConnectionIdType> &,
            const protocol_wire::BuyerTerms &,
-           const TorrentPieceInformation &);
+           const TorrentPieceInformation &,
+           const AllSellersGone &);
 
     //// Connection level client events
 
@@ -57,16 +58,12 @@ public:
     // Remove connection
     void removeConnection(const ConnectionIdType &);
 
+    // Disconnect seller connections if it has taken longer than `limit` to service next expected piece
+    void disconnectSlowSellers(const std::chrono::duration<double> & limit);
+
     // Transition to BuyingState::sending_invitations
     void startDownloading(const Coin::Transaction & contractTx,
                           const PeerToStartDownloadInformationMap<ConnectionIdType> & peerToStartDownloadInformationMap);
-
-    // A valid piece was sent too us on given connection
-    void validPieceReceivedOnConnection(const ConnectionIdType &, int index);
-
-    // An invalid piece was sent too us on given connection
-    // Should not be called when session is stopped.
-    void invalidPieceReceivedOnConnection(const ConnectionIdType &, int index);
 
     //// Connection level state machine events
 
@@ -74,6 +71,7 @@ public:
     void sellerHasJoined(const ConnectionIdType &);
     void sellerHasInterruptedContract(const ConnectionIdType &);
     void receivedFullPiece(const ConnectionIdType &, const protocol_wire::PieceData &);
+    void remoteMessageOverflow(const ConnectionIdType &);
 
     //// Change mode
 
@@ -116,10 +114,14 @@ public:
 
 private:
 
+    void sendInvitations () const;
+
+    void resetIfAllSellersGone ();
+
     //// Assigning pieces
 
-    // Tries to assign an unassigned piece to given seller
-    bool tryToAssignAndRequestPiece(detail::Seller<ConnectionIdType> &);
+    // Tries to assign pieces to given seller
+    int tryToAssignAndRequestPieces(detail::Seller<ConnectionIdType> &);
 
     //// Utility routines
 
@@ -136,6 +138,12 @@ private:
     // Unguarded
     void _start();
 
+    // A valid piece was sent to us on given connection
+    void validPieceReceivedOnConnection(detail::Seller<ConnectionIdType> &, int index);
+
+    // An invalid piece was sent to us on given connection
+    void invalidPieceReceivedOnConnection(detail::Seller<ConnectionIdType> &, int index);
+
     //// Members
 
     // Reference to core of session
@@ -145,6 +153,7 @@ private:
     RemovedConnectionCallbackHandler<ConnectionIdType> _removedConnection;
     FullPieceArrived<ConnectionIdType> _fullPieceArrived;
     SentPayment<ConnectionIdType> _sentPayment;
+    AllSellersGone _allSellersGone;
 
     // State
     BuyingState _state;
@@ -168,19 +177,6 @@ private:
     // Is used to detect when we are done.
     uint32_t _numberOfMissingPieces;
 
-    // Indexes of pieces which were assigned, but then later
-    // unassigned for some reason (e.g. seller left, timed out, etc).
-    // They are prioritized when assiging new pieces.
-    // NB: using std::deque over std::queue, since latter
-    std::deque<uint32_t> _deAssignedPieces;
-
-    // Index before which we should never assign a piece unless all pieces
-    // with a greater index have been assigned. Following this constraint
-    // results in in-order downloading of pieces, e.g. for media streaming.
-    // Will typically also be reset of client desires to set streaming of media to
-    // some midway point
-    uint32_t _assignmentLowerBound;
-
     // When we started sending out invitations
     // (i.e. entered state StartedState::sending_invitations).
     // Is used to figure out when to start trying to build the contract
@@ -188,6 +184,10 @@ private:
 
     // Function that if defined will return the next piece that we should download
     PickNextPieceMethod<ConnectionIdType> _pickNextPieceMethod;
+
+    // Maximum number of concurrent requests to send before waiting for piece responses
+    // The optimum value depends on many factors. It is hardcoded to 4 for now.
+    const int _maxConcurrentRequests;
 };
 
 }
