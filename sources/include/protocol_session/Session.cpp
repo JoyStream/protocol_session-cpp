@@ -165,7 +165,8 @@ namespace protocol_session {
                                               const FullPieceArrived<ConnectionIdType> & fullPieceArrived,
                                               const SentPayment<ConnectionIdType> & sentPayment,
                                               const protocol_wire::BuyerTerms & terms,
-                                              const TorrentPieceInformation & information) {
+                                              const TorrentPieceInformation & information,
+                                              const AllSellersGone & allSellersGone) {
 
         // Prepare for exiting current state
         switch(_mode) {
@@ -208,7 +209,8 @@ namespace protocol_session {
                                                        fullPieceArrived,
                                                        sentPayment,
                                                        terms,
-                                                       information);
+                                                       information,
+                                                       allSellersGone);
     }
 
     template <class ConnectionIdType>
@@ -432,6 +434,37 @@ namespace protocol_session {
     }
 
     template<class ConnectionIdType>
+    void Session<ConnectionIdType>::disconnectSlowSellers(const std::chrono::duration<double> & limit) {
+      switch(_mode) {
+
+          case SessionMode::not_set:
+
+              assert(_observing == nullptr && _buying == nullptr && _selling == nullptr);
+              throw exception::SessionModeNotSetException();
+              break;
+
+          case SessionMode::observing:
+
+              assert(_observing != nullptr && _buying == nullptr && _selling == nullptr);
+              break;
+
+          case SessionMode::buying:
+
+              assert(_observing == nullptr && _buying != nullptr && _selling == nullptr);
+              _buying->disconnectSlowSellers(limit);
+              break;
+
+          case SessionMode::selling:
+
+              assert(_observing == nullptr && _buying == nullptr && _selling != nullptr);
+              break;
+
+          default:
+              assert(false);
+      }
+    }
+
+    template<class ConnectionIdType>
     status::Connection<ConnectionIdType> Session<ConnectionIdType>::connectionStatus(const ConnectionIdType & id) const noexcept {
 
         if(_mode == SessionMode::not_set)
@@ -503,73 +536,6 @@ namespace protocol_session {
                 assert(_observing == nullptr && _buying != nullptr && _selling == nullptr);
                 _buying->setPickNextPieceMethod(pickNextPieceMethod);
                 _buying->startDownloading(contractTx, peerToStartDownloadInformationMap);
-                break;
-
-            case SessionMode::selling:
-
-                assert(_observing == nullptr && _buying == nullptr && _selling != nullptr);
-                throw exception::ModeIncompatibleOperation();
-                break;
-
-            default:
-                assert(false);
-        }
-
-    }
-
-    template<class ConnectionIdType>
-    void Session<ConnectionIdType>::validPieceReceivedOnConnection(const ConnectionIdType & id, int index) {
-
-        switch(_mode) {
-
-            case SessionMode::not_set:
-
-                assert(_observing == nullptr && _buying == nullptr && _selling == nullptr);
-                throw exception::SessionModeNotSetException();
-
-            case SessionMode::observing:
-
-                assert(_observing != nullptr && _buying == nullptr && _selling == nullptr);
-                throw exception::ModeIncompatibleOperation();
-                break;
-
-            case SessionMode::buying:
-
-                assert(_observing == nullptr && _buying != nullptr && _selling == nullptr);
-                _buying->validPieceReceivedOnConnection(id, index);
-                break;
-
-            case SessionMode::selling:
-
-                assert(_observing == nullptr && _buying == nullptr && _selling != nullptr);
-                throw exception::ModeIncompatibleOperation();
-                break;
-
-            default:
-                assert(false);
-        }
-
-    }
-
-    template<class ConnectionIdType>
-    void Session<ConnectionIdType>::invalidPieceReceivedOnConnection(const ConnectionIdType & id, int index) {
-
-        switch(_mode) {
-
-            case SessionMode::not_set:
-
-                throw exception::SessionModeNotSetException();
-
-            case SessionMode::observing:
-
-                assert(_observing != nullptr && _buying == nullptr && _selling == nullptr);
-                throw exception::ModeIncompatibleOperation();
-                break;
-
-            case SessionMode::buying:
-
-                assert(_observing == nullptr && _buying != nullptr && _selling == nullptr);
-                _buying->invalidPieceReceivedOnConnection(id, index);
                 break;
 
             case SessionMode::selling:
@@ -689,7 +655,7 @@ namespace protocol_session {
     }
 
     template<class ConnectionIdType>
-    void Session<ConnectionIdType>::pieceLoaded(const ConnectionIdType & id, const protocol_wire::PieceData & data, int index) {
+    void Session<ConnectionIdType>::pieceLoaded(const protocol_wire::PieceData & data, int index) {
 
         switch(_mode) {
 
@@ -712,7 +678,7 @@ namespace protocol_session {
             case SessionMode::selling:
 
                 assert(_observing == nullptr && _buying == nullptr && _selling != nullptr);
-                _selling->pieceLoaded(id, data, index);
+                _selling->pieceLoaded(data, index);
                 break;
 
             default:
@@ -916,6 +882,28 @@ namespace protocol_session {
     }
 
     template<class ConnectionIdType>
+    void Session<ConnectionIdType>::remoteMessageOverflow(const ConnectionIdType & id) {
+
+        assert(hasConnection(id));
+
+        if (_buying != nullptr) {
+          _buying->remoteMessageOverflow(id);
+        } else if (_selling != nullptr) {
+          _selling->remoteMessageOverflow(id);
+        }
+    }
+
+    template<class ConnectionIdType>
+    void Session<ConnectionIdType>::localMessageOverflow(const ConnectionIdType & id) {
+        // This callback will come from the connection state machine if we try to send too many payments
+        // or as a seller, too many pieces.
+        // This should not happen if our implementation is correct
+        assert(hasConnection(id));
+        std::clog << "Error: localMessageOverflow on connection " << id << std::endl;
+        assert(false);
+    }
+
+    template<class ConnectionIdType>
     detail::Connection<ConnectionIdType> * Session<ConnectionIdType>::createConnection(const ConnectionIdType & id, const SendMessageOnConnectionCallbacks & sendMessageCallbacks) {
 
         return new detail::Connection<ConnectionIdType>(
@@ -932,7 +920,9 @@ namespace protocol_session {
         [this, id](const Coin::Signature & s) { this->receivedInvalidPayment(id, s); },
         [this, id]() { this->sellerHasJoined(id); },
         [this, id]() { this->sellerHasInterruptedContract(id); },
-        [this, id](const protocol_wire::PieceData & p) { this->receivedFullPiece(id, p); });
+        [this, id](const protocol_wire::PieceData & p) { this->receivedFullPiece(id, p); },
+        [this, id]() { this->remoteMessageOverflow(id); },
+        [this, id]() { this->localMessageOverflow(id); });
     }
 
     template <class ConnectionIdType>

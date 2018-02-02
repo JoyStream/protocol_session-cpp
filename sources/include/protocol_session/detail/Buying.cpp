@@ -27,7 +27,8 @@ namespace detail {
                                      const FullPieceArrived<ConnectionIdType> & fullPieceArrived,
                                      const SentPayment<ConnectionIdType> & sentPayment,
                                      const protocol_wire::BuyerTerms & terms,
-                                     const TorrentPieceInformation & information)
+                                     const TorrentPieceInformation & information,
+                                     const AllSellersGone & allSellersGone)
         : _session(session)
         , _removedConnection(removedConnection)
         , _fullPieceArrived(fullPieceArrived)
@@ -35,7 +36,8 @@ namespace detail {
         , _state(BuyingState::sending_invitations)
         , _terms(terms)
         , _numberOfMissingPieces(0)
-        , _assignmentLowerBound(0) {
+        , _allSellersGone(allSellersGone)
+        , _maxConcurrentRequests(4) {
         //, _lastStartOfSendingInvitations(0) {
 
         // Setup pieces
@@ -85,90 +87,49 @@ namespace detail {
     }
 
     template <class ConnectionIdType>
-    void Buying<ConnectionIdType>::validPieceReceivedOnConnection(const ConnectionIdType & id, int index) {
+    void Buying<ConnectionIdType>::disconnectSlowSellers(const std::chrono::duration<double> & limit) {
 
-        // No state guard required, piece validation can occur
-        // after connection is gone, or even session has been stopped.
+      for(auto mapping : _sellers) {
+        auto seller = mapping.second;
 
-        // Update status of seller
-        auto itr = _sellers.find(id);
-        assert(itr != _sellers.cend());
+        if (seller.isGone()) continue;
 
-        detail::Seller<ConnectionIdType> & s = itr->second;
-
-        if(s.indexOfAssignedPiece() != index)
-            throw exception::IncorrectPieceIndex(index, s.indexOfAssignedPiece());
-
-        // This results in payment being sent,
-        // if connection is still live, and state updated
-        bool paymentSent = s.pieceWasValid();
-
-        // Send notification
-        if(paymentSent) {
-
-            auto connection = _session->get(id);
-            const paymentchannel::Payor & payor = connection->payor();
-
-            _sentPayment(id,
-                         payor.price(),
-                         payor.numberOfPaymentsMade(),
-                         payor.amountPaid(),
-                         index);
+        if (seller.servicingPieceHasTimedOut(limit)) {
+          removeConnection(seller.connection()->connectionId(), DisconnectCause::seller_servicing_piece_has_timed_out);
         }
-
-        // Update piece status
-        detail::Piece<ConnectionIdType> & piece = _pieces[index];
-        assert(piece.connectionId() == id);
-        assert(piece.state() != PieceState::unassigned);
-
-        // if its not already downloaded from out of bounds
-        if(piece.state() != PieceState::downloaded) {
-
-            assert(piece.state() == PieceState::being_validated_and_stored);
-            assert(_state == BuyingState::downloading);
-
-            // Mark as downloaded
-            piece.downloaded();
-
-            // Count downloaded piece
-            _numberOfMissingPieces--;
-
-            // Do we still have pieces which are not yet downloaded
-            if(_numberOfMissingPieces > 0) {
-
-                // If so, and are stills started,
-                // then we try to assign a piece to this seller
-                if(_session->_state == SessionState::started)
-                    tryToAssignAndRequestPiece(s);
-
-            } else if(_numberOfMissingPieces == 0) // otherwise we are done!
-                _state = BuyingState::download_completed;
-
-        }
-
+      }
     }
 
     template <class ConnectionIdType>
-    void Buying<ConnectionIdType>::invalidPieceReceivedOnConnection(const ConnectionIdType & id, int index) {
+    void Buying<ConnectionIdType>::validPieceReceivedOnConnection(detail::Seller<ConnectionIdType> &seller, int index) {
+        // Cannot happen when stopped, as there are no connections
+        assert(_session->_state != SessionState::stopped);
+        assert(_state == BuyingState::downloading);
+        assert(index >= 0);
+        assert(!seller.isGone());
 
-        // No state guard required, piece validation can occur
-        // after connection is gone, or even session has been stopped.
+        seller.pieceWasValid();
 
-        // Update status of seller
-        auto itr = _sellers.find(id);
-        assert(itr != _sellers.cend());
+        auto connection = seller.connection();
 
-        detail::Seller<ConnectionIdType> & s = itr->second;
-        if(s.indexOfAssignedPiece() != index)
-            throw exception::IncorrectPieceIndex(index, s.indexOfAssignedPiece());
+        const paymentchannel::Payor & payor = connection->payor();
 
-        s.pieceWasInvalid();
+        _sentPayment(connection->connectionId(), payor.price(), payor.numberOfPaymentsMade(), payor.amountPaid(), index);
 
-        // If connection still exists, remove it,
-        // however it may no longer exist,
-        // e.g. because it left, or we got stopped.
-        if(_session->hasConnection(id))
-            removeConnection(id, DisconnectCause::seller_sent_invalid_piece);
+        tryToAssignAndRequestPieces(seller);
+    }
+
+    template <class ConnectionIdType>
+    void Buying<ConnectionIdType>::invalidPieceReceivedOnConnection(detail::Seller<ConnectionIdType> & seller, int index) {
+        // Cannot happen when stopped, as there are no connections
+        assert(_session->_state != SessionState::stopped);
+        assert(_state == BuyingState::downloading);
+        assert(index >= 0);
+        assert(!seller.isGone());
+
+        seller.pieceWasInvalid();
+
+        removeConnection(seller.connection()->connectionId(), DisconnectCause::seller_sent_invalid_piece);
     }
 
     template <class ConnectionIdType>
@@ -241,30 +202,27 @@ namespace detail {
 
         detail::Seller<ConnectionIdType> & s = itr->second;
 
-        assert(s.state() == SellerState::waiting_for_full_piece);
-
-        // Update state
-        s.fullPieceArrived();
-
-        // Get piece and update status
-        int index = s.indexOfAssignedPiece();
+        // Update state and get expected piece index
+        int index = s.fullPieceArrived();
 
         detail::Piece<ConnectionIdType> & piece = _pieces[index];
 
         piece.arrived();
 
-        /**
-        // NB: let client deal with this for now
-        // Check that this is correct length
-        if(p.length() != piece.size()) {
+        // Notify client - client should immediatly validate the piece and return result of validation
+        bool wasValid = _fullPieceArrived(id, p, index);
 
-            // 1) tell client
-            // 2) remove connection
+        if (wasValid) {
+          validPieceReceivedOnConnection(s, index);
+        } else {
+          invalidPieceReceivedOnConnection(s, index);
         }
-        */
+    }
 
-        // Notify client
-        _fullPieceArrived(id, p, index);
+    template<class ConnectionIdType>
+    void Buying<ConnectionIdType>::remoteMessageOverflow(const ConnectionIdType & id) {
+      std::clog << "Error: remoteMessageOverflow from seller connection " << id << std::endl;
+      removeConnection(id, DisconnectCause::seller_message_overflow);
     }
 
     template <class ConnectionIdType>
@@ -301,8 +259,13 @@ namespace detail {
         for(auto itr = _session->_connections.cbegin();itr != _session->_connections.cend();)
             itr = removeConnection(itr->first, DisconnectCause::client);
 
-        // Update state
+        // Update core session state
         _session->_state = SessionState::stopped;
+
+        // Reset to sending_invitations state if download did not complete
+        if (_state == BuyingState::downloading) {
+            _state = BuyingState::sending_invitations;
+        }
     }
 
     template <class ConnectionIdType>
@@ -324,6 +287,8 @@ namespace detail {
         if(_session->_state == SessionState::started) {
 
             // Allocate pieces if we are downloading
+            // Timeout sellers if they have not seviced a piece in time.
+            // Reset state to allow restarting downloading after all sellers are gone
             if(_state == BuyingState::downloading) {
 
                 for(auto mapping : _sellers) {
@@ -332,7 +297,7 @@ namespace detail {
                     detail::Seller<ConnectionIdType> & s = mapping.second;
 
                     // A seller may be waiting to be assigned a new piece
-                    if(s.state() == SellerState::waiting_to_be_assigned_piece) {
+                    if(!s.isGone() && s.piecesAwaitingArrival().size() == 0) {
 
                         // This can happen when a seller has previously uploaded a valid piece,
                         // but there were no unassigned pieces at that time,
@@ -341,19 +306,12 @@ namespace detail {
                         // * seller interrupts contract by updating terms
                         // * seller sent an invalid piece
 
-                        tryToAssignAndRequestPiece(s);
-
-                    } else if(s.state() == SellerState::waiting_for_full_piece) {
-
-                        // Get id of connection for this seller
-                        ConnectionIdType id = s.connection()->connectionId();
-
-                        // Check if seller has timed out in servicing the current request,
-                        // if so remove connection
-                        if(s.servicingPieceHasTimedOut(std::chrono::seconds(20))) // <== hard coded for now, logic will be factored out later! see PR on this
-                            removeConnection(id, DisconnectCause::seller_servicing_piece_has_timed_out);
+                        tryToAssignAndRequestPieces(s);
                     }
                 }
+
+                // If all sellers are gone, reset state
+                resetIfAllSellersGone();
             }
         }
     }
@@ -381,9 +339,6 @@ namespace detail {
         }
 
         piece.downloaded();
-
-        // Remove from unassigned queue if present
-        _deAssignedPieces.erase(std::remove(_deAssignedPieces.begin(), _deAssignedPieces.end(), index), _deAssignedPieces.end());
     }
 
     template <class ConnectionIdType>
@@ -410,22 +365,7 @@ namespace detail {
             // ditch any existing sellers
             _sellers.clear();
 
-            for(auto mapping : _session->_connections) {
-
-                detail::Connection<ConnectionIdType> * c = mapping.second;
-
-                // Check that this peer is seller,
-                protocol_statemachine::AnnouncedModeAndTerms a = c->announcedModeAndTermsFromPeer();
-
-                // and has good enough terms to warrant an invitation,
-                // then send invitation
-                if(a.modeAnnounced() == protocol_statemachine::ModeAnnounced::sell && _terms.satisfiedBy(a.sellModeTerms())) {
-
-                    c->processEvent(protocol_statemachine::event::InviteSeller());
-
-                    std::cout << "Invited: " << IdToString(mapping.first) << std::endl;
-                }
-            }
+            sendInvitations();
         }
     }
 
@@ -444,7 +384,7 @@ namespace detail {
 
         for(auto mapping : _sellers) {
             // skip sellers that are no longer around
-            if(mapping.second.state() == protocol_session::SellerState::gone)
+            if(mapping.second.isGone())
                 continue;
 
             sellerStatuses.insert(std::make_pair(mapping.first, mapping.second.status()));
@@ -541,7 +481,7 @@ namespace detail {
             auto c = it->second;
 
             // Create sellers
-            _sellers[id] = detail::Seller<ConnectionIdType>(SellerState::waiting_to_be_assigned_piece, c, 0);
+            _sellers[id] = detail::Seller<ConnectionIdType>(c);
 
             // Send message to peer
             StartDownloadConnectionInformation inf = m.second;
@@ -552,7 +492,7 @@ namespace detail {
                                                                            inf.value));
 
             // Assign the first piece to this peer
-            tryToAssignAndRequestPiece(_sellers[id]);
+            tryToAssignAndRequestPieces(_sellers[id]);
         }
 
         /////////////////////////
@@ -561,38 +501,61 @@ namespace detail {
     }
 
     template <class ConnectionIdType>
-    bool Buying<ConnectionIdType>::tryToAssignAndRequestPiece(detail::Seller<ConnectionIdType> & s) {
+    void Buying<ConnectionIdType>::sendInvitations() const {
+
+      assert(_session->_state == SessionState::started);
+      assert(_state == BuyingState::sending_invitations);
+
+      for(auto mapping : _session->_connections) {
+
+          detail::Connection<ConnectionIdType> * c = mapping.second;
+
+          // Check that this peer is seller,
+          protocol_statemachine::AnnouncedModeAndTerms a = c->announcedModeAndTermsFromPeer();
+
+          // and has good enough terms to warrant an invitation,
+          // then send invitation
+          if(a.modeAnnounced() == protocol_statemachine::ModeAnnounced::sell && _terms.satisfiedBy(a.sellModeTerms())) {
+
+              c->processEvent(protocol_statemachine::event::InviteSeller());
+
+              std::cout << "Invited: " << IdToString(mapping.first) << std::endl;
+          }
+      }
+    }
+
+    template <class ConnectionIdType>
+    int Buying<ConnectionIdType>::tryToAssignAndRequestPieces(detail::Seller<ConnectionIdType> & s) {
 
         assert(_session->_state == SessionState::started);
         assert(_state == BuyingState::downloading);
-        assert(s.state() == SellerState::waiting_to_be_assigned_piece);
+        assert(!s.isGone());
 
-        // Try to find index of next unassigned piece
-        int pieceIndex;
+        int totalNewRequests = 0;
+        int concurrentRequests = s.piecesAwaitingArrival().size();
 
-        // Prioritize deassigned piece
-        if(!_deAssignedPieces.empty()) {
-            pieceIndex = _deAssignedPieces.front();
-            _deAssignedPieces.pop_front();
-        } else {
-            try {
-                pieceIndex = this->_pickNextPieceMethod(&_pieces);
-            } catch(const std::runtime_error & e) {
-                // No unassigned piece was found
-                return false;
-            }
+        while(concurrentRequests < _maxConcurrentRequests) {
+
+          // Try to find index of next unassigned piece
+          int pieceIndex;
+
+          try {
+              pieceIndex = this->_pickNextPieceMethod(&_pieces);
+          } catch(const std::runtime_error & e) {
+              // No unassigned piece was found
+              break;
+          }
+
+          // Assign piece to seller
+          _pieces[pieceIndex].assigned(s.connection()->connectionId());
+
+          // Request piece from seller
+          concurrentRequests = s.requestPiece(pieceIndex);
+
+          totalNewRequests++;
         }
 
-        // Assign piece to seller
-        _pieces[pieceIndex].assigned(s.connection()->connectionId());
-
-        // Request piece from seller
-        s.requestPiece(pieceIndex);
-
-        // Update assignment bound
-        _assignmentLowerBound = pieceIndex + 1;
-
-        return true;
+        return totalNewRequests;
     }
 
     template<class ConnectionIdType>
@@ -612,7 +575,7 @@ namespace detail {
             // It is possible to find a seller in the "gone" state that we have previoulsy removed.
             // This happens when the connection times out and is later re-establish. The connection will have the
             // same connection id (because it is the same peer)
-            if(s.state() != SellerState::gone) {
+            if(!s.isGone()) {
               // Remove
               removeSeller(s);
             }
@@ -629,38 +592,52 @@ namespace detail {
 
     template <class ConnectionIdType>
     void Buying<ConnectionIdType>::removeSeller(detail::Seller<ConnectionIdType> & s) {
+        if (s.isGone()) return;
 
-        // If this seller is assigned a piece, then we must unassign it
-        if(s.state() == SellerState::waiting_for_full_piece ||
-           s.state() == SellerState::waiting_for_piece_validation_and_storage) {
+        // we must be downloading
+        assert(_state == BuyingState::downloading);
 
-            // we must be downloading then
-            assert(_state == BuyingState::downloading);
+        // If this seller has assigned piecees, then we must unassign them
+        for(uint i = 0;i < _pieces.size();i++) {
+            detail::Piece<ConnectionIdType> & piece = _pieces[i];
 
-            // Get piece
-            detail::Piece<ConnectionIdType> & piece = _pieces[s.indexOfAssignedPiece()];
+            if (piece.connectionId() != s.connection()->connectionId()) continue;
 
-            // Check that it hasnt already been downloaded out of bounds
-            if(piece.state() != PieceState::downloaded) {
-
-                // waiting_for_full_piece -> being_downloaded
-                assert(s.state() != SellerState::waiting_for_full_piece ||
-                       piece.state() == PieceState::being_downloaded);
-
-                // waiting_for_piece_validation_and_storage -> being_validated_and_stored
-                assert(s.state() != SellerState::waiting_for_piece_validation_and_storage ||
-                        piece.state() == PieceState::being_validated_and_stored);
-
-                // Mark as not assigned
-                piece.deAssign();
-
-                // Add to queue of unassigned pieces
-                _deAssignedPieces.push_back(piece.index());
-            }
+            // Deassign the piece
+            piece.deAssign();
         }
 
-        // Mark as seller as gone
+        // Mark as seller as gone, but is not removed from _sellers map
         s.removed();
+    }
+
+    template <class ConnectionIdType>
+    void Buying<ConnectionIdType>::resetIfAllSellersGone () {
+
+        assert(_state == BuyingState::downloading);
+        assert(_session->_state == SessionState::started);
+
+        // Find any seller that is not in gone state
+        auto seller = find_if(_sellers.begin(), _sellers.end(), [] ( std::pair<ConnectionIdType, detail::Seller<ConnectionIdType>> mapping) {
+          return !mapping.second.isGone();
+        });
+
+        // At least one seller is still connected
+        if(seller != _sellers.cend()) return;
+
+        std::cout << "All Sellers Are Gone" << std::endl;
+
+        // Notify client
+        _allSellersGone();
+
+        // Transition to sending invitations state
+        _state = BuyingState::sending_invitations;
+
+        // Clear sellers
+        _sellers.clear();
+
+        // Send invitations to all connections
+        sendInvitations();
     }
 
     template <class ConnectionIdType>
@@ -675,8 +652,15 @@ namespace detail {
 
             detail::Seller<ConnectionIdType> & s = itr.second;
 
-            if(s.isPossiblyOwedPayment())
+            if(s.isPossiblyOwedPayment()) {
+              while(s.piecesAwaitingArrival().size() > 0) {
+                s.fullPieceArrived();
+              }
+
+              while(s.numberOfPiecesAwaitingValidation() > 0) {
                 s.pieceWasValid();
+              }
+            }
         }
     }
 

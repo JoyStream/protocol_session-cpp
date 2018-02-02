@@ -106,7 +106,7 @@ TEST_F(SessionTest, selling)
     assert(sellerTerms.satisfiedBy(buyerTerms));
 
     // back to sell mode
-    toSellMode(sellerTerms, numberOfExchangesWhileStarted + 1);
+    toSellMode(sellerTerms, numberOfExchangesWhileStarted + 10);
 
     // Start session
     firstStart();
@@ -129,7 +129,7 @@ TEST_F(SessionTest, selling)
 
     // Load piece, without it being sent
     protocol_wire::PieceData data;
-    session->pieceLoaded(peer, data, numberOfExchangesWhileStarted);
+    session->pieceLoaded(data, numberOfExchangesWhileStarted);
 
     EXPECT_TRUE(spy->blankSession());
     ConnectionSpy<ID> * c = spy->connectionSpies.at(peer);
@@ -140,6 +140,27 @@ TEST_F(SessionTest, selling)
 
     // Make sure this results in piece being sent
     assertFullPieceSent(peer, data);
+    spy->reset();
+
+    // Receive two requests
+    protocol_wire::PieceData first = protocol_wire::PieceData::fromHex("cd");
+    protocol_wire::PieceData second = protocol_wire::PieceData::fromHex("ab");
+
+    receiveValidFullPieceRequest(peer, numberOfExchangesWhileStarted + 1);
+    receiveValidFullPieceRequest(peer, numberOfExchangesWhileStarted + 2);
+
+    // Load pieces out of order
+    session->pieceLoaded(second, numberOfExchangesWhileStarted + 2);
+
+    // Should not send any pieces yet - first piece not yet loaded
+    EXPECT_EQ((int)c->sendFullPieceCallbackSlot.size(), 0);
+
+    // Load remaining piece
+    session->pieceLoaded(first, numberOfExchangesWhileStarted + 1);
+
+    // Two pieces should have been sent in correct order
+    assertFullPieceSent(peer, {first, second});
+
     spy->reset();
 
     // Update terms
@@ -619,24 +640,20 @@ TEST_F(SessionTest, buying_seller_sent_invalid_piece)
     int requestedPiece;
     {
         ConnectionSpy<ID> * c = first.spy;
-        EXPECT_EQ((int)c->sendRequestFullPieceCallbackSlot.size(), 1);
+        EXPECT_GT((int)c->sendRequestFullPieceCallbackSlot.size(), 0);
         auto m2 = std::get<0>(c->sendRequestFullPieceCallbackSlot.front());
 
         requestedPiece = m2.pieceIndex();
     }
 
-    // Send piece
-    session->processMessageOnConnection(first.id, protocol_wire::FullPiece());
     spy->reset();
 
-    //
-    session->invalidPieceReceivedOnConnection(first.id, requestedPiece);
+    // Send piece and have buyer reject it
+    defaultPieceValidationResult = false;
+    session->processMessageOnConnection(first.id, protocol_wire::FullPiece());
 
-    // assert removal
+    // The seller should have been removed for sending and invalid piece
     assertConnectionRemoved(first.id, DisconnectCause::seller_sent_invalid_piece);
-
-    // extra check that no other callback was made
-    EXPECT_TRUE(spy->onlyCalledRemovedConnection());
 
     spy->reset();
 

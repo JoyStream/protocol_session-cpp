@@ -10,6 +10,7 @@
 #include <protocol_session/detail/Selling.hpp>
 #include <protocol_session/detail/Buying.hpp>
 #include <protocol_session/detail/Observing.hpp>
+#include <protocol_session/detail/PieceDeliveryPipeline.hpp>
 
 namespace joystream {
 namespace protocol_session {
@@ -31,7 +32,9 @@ namespace detail {
         , _anchorAnnounced(anchorAnnounced)
         , _receivedValidPayment(receivedValidPayment)
         , _terms(terms)
-        , _MAX_PIECE_INDEX(MAX_PIECE_INDEX) {
+        , _MAX_PIECE_INDEX(MAX_PIECE_INDEX)
+        , _maxOutstandingPayments(4)
+        , _maxPiecesToPreload(2) {
 
         // Notify any existing peers
         for(auto itr : _session->_connections) {
@@ -103,26 +106,26 @@ namespace detail {
     }
 
     template<class ConnectionIdType>
-    void Selling<ConnectionIdType>::pieceLoaded(const ConnectionIdType & id, const protocol_wire::PieceData & data, int) {
+    void Selling<ConnectionIdType>::pieceLoaded(const protocol_wire::PieceData & data, int index) {
 
-        // We cannot have connection and be stopped
-        assert(_session->state() != SessionState::stopped);
+        if(_session->state() == SessionState::stopped)
+          return;
 
-        // Get connection state
-        detail::Connection<ConnectionIdType> * c = _session->get(id);
+        // Go through all buyer connections we are servicing and fill their delivery pipeline
+        for(auto m : _session->_connections) {
+          detail::Connection<ConnectionIdType> * c = m.second;
 
-        // Make sure connection is still in appropriate state
-        if(!c-> template inState<joystream::protocol_statemachine::LoadingPiece>())
-            return;
+          // Make sure connection is still in appropriate state
+          if(!c-> template inState<joystream::protocol_statemachine::ServicingPieceRequests>())
+              continue;
 
-        // Store loaded piece in connection, we dont sent if paused
-        assert(!c->loadedPiecePending());
-        c->setLoadedPiecePending(true);
-        c->setLoadedPieceData(data);
+          c->pieceDeliveryPipeline().dataReady(index, data);
 
-        // If we are starte, then send off
-        if(_session->state() == SessionState::started)
-            tryToLoadPiece(c);
+          // If we are started, then send off
+          if(_session->state() == SessionState::started) {
+              tryToSendPieces(c);
+          }
+        }
     }
 
     template<class ConnectionIdType>
@@ -185,7 +188,15 @@ namespace detail {
 
         // Notify client about piece request
         // NB** We do this, even if we are paused!
-        _loadPieceForBuyer(id, index);
+        auto connection = _session->get(id);
+
+        // Add piece to pipeline
+        connection->pieceDeliveryPipeline().add(index);
+
+        // Service request only if we are started
+        if (_session->state() == SessionState::started) {
+          tryToLoadPieces(connection);
+        }
     }
 
     template<class ConnectionIdType>
@@ -219,13 +230,21 @@ namespace detail {
     }
 
     template<class ConnectionIdType>
-    void Selling<ConnectionIdType>::receivedValidPayment(const ConnectionIdType & endPoint, const Coin::Signature &) {
+    void Selling<ConnectionIdType>::receivedValidPayment(const ConnectionIdType & id, const Coin::Signature &) {
 
-        auto connection = _session->get(endPoint);
+        auto connection = _session->get(id);
 
         const paymentchannel::Payee & payee = connection->payee();
 
-        _receivedValidPayment(endPoint, payee.price(), payee.numberOfPaymentsMade(), payee.amountPaid());
+        _receivedValidPayment(id, payee.price(), payee.numberOfPaymentsMade(), payee.amountPaid());
+
+        // assert that this payment should be for the piece at the front of the queue
+        connection->pieceDeliveryPipeline().paymentReceived();
+
+        if (_session->state() == SessionState::started) {
+            tryToSendPieces(connection);
+            tryToLoadPieces(connection);
+        }
     }
 
     template<class ConnectionIdType>
@@ -241,6 +260,13 @@ namespace detail {
 
         // Notify state machine about deletion
         throw protocol_statemachine::exception::StateMachineDeletedException();
+    }
+
+    template<class ConnectionIdType>
+    void Selling<ConnectionIdType>::remoteMessageOverflow(const ConnectionIdType & id) {
+      std::clog << "Error: remoteMessageOverflow from buyer connection " << id << std::endl;
+
+      removeConnection(id, DisconnectCause::buyer_message_overflow);
     }
 
     template<class ConnectionIdType>
@@ -273,8 +299,10 @@ namespace detail {
             detail::Connection<ConnectionIdType> * c = m.second;
 
             // Waiting for piece to be loaded, which may have been aborted due to pause
-            if(c-> template inState<protocol_statemachine::LoadingPiece>())
-                tryToLoadPiece(c);
+            if(c-> template inState<protocol_statemachine::ServicingPieceRequests>()) {
+                tryToSendPieces(c);
+                tryToLoadPieces(c);
+            }
         }
     }
 
@@ -351,15 +379,30 @@ namespace detail {
     }
 
     template<class ConnectionIdType>
-    void Selling<ConnectionIdType>::tryToLoadPiece(detail::Connection<ConnectionIdType> * c) {
+    void Selling<ConnectionIdType>::tryToLoadPieces(detail::Connection<ConnectionIdType> * c) {
 
         assert(_session->state() == SessionState::started);
-        assert(c-> template inState<joystream::protocol_statemachine::LoadingPiece>());
+        assert(c-> template inState<joystream::protocol_statemachine::ServicingPieceRequests>());
 
-        if(c->loadedPiecePending()) {
-            c->processEvent(joystream::protocol_statemachine::event::PieceLoaded(c->loadedPieceData()));
-            c->setLoadedPiecePending(false);
+        auto piecesToLoad = c->pieceDeliveryPipeline().getNextBatchToLoad(_maxOutstandingPayments + _maxPiecesToPreload);
+
+        for (auto index : piecesToLoad) {
+          _loadPieceForBuyer(c->connectionId(), index);
         }
+
+    }
+    template<class ConnectionIdType>
+    void Selling<ConnectionIdType>::tryToSendPieces(detail::Connection<ConnectionIdType> * c) {
+
+      assert(_session->state() == SessionState::started);
+      assert(c-> template inState<joystream::protocol_statemachine::ServicingPieceRequests>());
+
+      auto piecesToSend = c->pieceDeliveryPipeline().getNextBatchToSend(_maxOutstandingPayments);
+
+      for (auto data : piecesToSend) {
+        //send piece
+        c->processEvent(joystream::protocol_statemachine::event::PieceLoaded(data));
+      }
 
     }
 

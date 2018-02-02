@@ -86,7 +86,8 @@ namespace detail {
                        const FullPieceArrived<ConnectionIdType> &,
                        const SentPayment<ConnectionIdType> &,
                        const protocol_wire::BuyerTerms &,
-                       const TorrentPieceInformation &);
+                       const TorrentPieceInformation &,
+                       const AllSellersGone &);
 
         /**
          * Warning: Do not call any of these operations
@@ -118,6 +119,8 @@ namespace detail {
 
         // Remove connection if one exists with given id, otherwise returns false.
         bool removeConnection(const ConnectionIdType &);
+
+        void disconnectSlowSellers(const std::chrono::duration<double> & limit);
 
         // *** TEMPORARY FIX ***
 
@@ -154,12 +157,6 @@ namespace detail {
                               const PeerToStartDownloadInformationMap<ConnectionIdType> & peerToStartDownloadInformationMap,
                               const PickNextPieceMethod<ConnectionIdType> & pickNextPieceMethod);
 
-        // A valid piece was sent too us on given connection
-        void validPieceReceivedOnConnection(const ConnectionIdType &, int index);
-
-        // An invalid piece was sent too us on given connection
-        void invalidPieceReceivedOnConnection(const ConnectionIdType &, int index);
-
         // Piece with given index has been downloaded, but not through
         // a regitered connection. Could be non-joystream peers, or something out of bounds.
         void pieceDownloaded(int);
@@ -190,7 +187,7 @@ namespace detail {
                             const Coin::PubKeyHash & finalPkHash);
 
         // Data for given piece has been loaded
-        void pieceLoaded(const ConnectionIdType &, const protocol_wire::PieceData &, int);
+        void pieceLoaded(const protocol_wire::PieceData &, int);
 
         // Update terms when selling
         void updateTerms(const protocol_wire::SellerTerms &);
@@ -249,6 +246,8 @@ namespace detail {
         void sellerHasJoined(const ConnectionIdType &);
         void sellerHasInterruptedContract(const ConnectionIdType &);
         void receivedFullPiece(const ConnectionIdType &, const protocol_wire::PieceData &);
+        void remoteMessageOverflow(const ConnectionIdType &);
+        void localMessageOverflow(const ConnectionIdType &);
 
         //// Utility routines
 

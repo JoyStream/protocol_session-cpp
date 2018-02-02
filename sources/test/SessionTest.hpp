@@ -36,6 +36,9 @@ public:
     Session<ID> * session;
     SessionSpy<ID> * spy;
 
+    // The validation result value returned when a full pieces arrives - initialized to true
+    bool defaultPieceValidationResult;
+
     // Integer value used to generate a key in nextPrivateKey()
     uint nextKey;
     // Generates private key which is 32 byte unsigned integer encoded i
@@ -101,7 +104,7 @@ public:
 
     //
     void assertFullPieceSent(ID, const protocol_wire::PieceData &) const;
-
+    void assertFullPieceSent(ID peer, const std::vector<protocol_wire::PieceData> &) const;
     //// Selling
 
 
@@ -161,7 +164,7 @@ public:
 
         void contractAnnounced() {
             auto slot = spy->sendReadyCallbackSlot;
-            EXPECT_TRUE((int)slot.size() > 0);
+            EXPECT_GT((int)slot.size(), 0);
             ready = std::get<0>(slot.front());
             payee = getPayee();
             // Remove message at front
@@ -181,7 +184,7 @@ public:
         }
 
         bool hasPendingFullPieceRequest() {
-            return spy->sendRequestFullPieceCallbackSlot.size() == 1;
+            return spy->sendRequestFullPieceCallbackSlot.size() > 0;
         }
 
         paymentchannel::Payee getPayee() {

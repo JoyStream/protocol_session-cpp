@@ -22,7 +22,8 @@ namespace protocol_session {
 SessionTest::SessionTest()
     : //network(Coin::Network::testnet3)
     session(nullptr)
-    , spy(nullptr) {
+    , spy(nullptr)
+    , defaultPieceValidationResult(true) {
 }
 
 void SessionTest::init() {
@@ -34,6 +35,11 @@ void SessionTest::init() {
 
     spy = new
     SessionSpy<ID>(
+      session,
+
+      [this](ID, protocol_wire::PieceData data, int index) -> bool {
+        return defaultPieceValidationResult;
+      }
                 /**
     [this](const P2SHScriptGeneratorFromPubKey & scriptGenerator, const uchar_vector &) -> Coin::KeyPair {
 
@@ -67,7 +73,7 @@ void SessionTest::init() {
         return addresses;
 
     },*/
-    session);
+    );
 }
 
 void SessionTest::cleanup() {
@@ -323,10 +329,23 @@ void SessionTest::assertTermsSentToAllPeers() const {
 void SessionTest::assertFullPieceSent(ID peer, const protocol_wire::PieceData & data) const {
     ConnectionSpy<ID> * c = spy->connectionSpies.at(peer);
 
-    EXPECT_EQ((int)c->sendFullPieceCallbackSlot.size(), 1);
-    auto m2 = std::get<0>(c->sendFullPieceCallbackSlot.front());
+    EXPECT_GT((int)c->sendFullPieceCallbackSlot.size(), 0);
+    auto m = std::get<0>(c->sendFullPieceCallbackSlot.front());
 
-    EXPECT_EQ(m2.pieceData(), data);
+    EXPECT_EQ(m.pieceData(), data);
+}
+
+void SessionTest::assertFullPieceSent(ID peer, const std::vector<protocol_wire::PieceData> & pieces) const {
+    ConnectionSpy<ID> * c = spy->connectionSpies.at(peer);
+
+    EXPECT_EQ((int)c->sendFullPieceCallbackSlot.size(), pieces.size());
+
+    auto it = c->sendFullPieceCallbackSlot.begin();
+
+    for(auto &pieceData : pieces) {
+      auto m = std::get<0>(*it++);
+      EXPECT_EQ(m.pieceData(), pieceData);
+    }
 }
 
 ////
@@ -402,7 +421,7 @@ void SessionTest::receiveValidFullPieceRequest(ID peer, int pieceIndexToRequest)
 }
 
 void SessionTest::sendFullPiece(ID id, const protocol_wire::PieceData & data, int pieceIndex) {
-    session->pieceLoaded(id, data, pieceIndex);
+    session->pieceLoaded(data, pieceIndex);
 
     EXPECT_TRUE(spy->blankSession());
 
@@ -451,13 +470,13 @@ void SessionTest::completeExchange(SellerPeer & peer) {
     int requestedPiece = 0;
 
     {
-        EXPECT_EQ((int)c->sendRequestFullPieceCallbackSlot.size(), 1);
+        EXPECT_TRUE((int)c->sendRequestFullPieceCallbackSlot.size() > 0);
         auto m2 = std::get<0>(c->sendRequestFullPieceCallbackSlot.front());
 
         requestedPiece = m2.pieceIndex();
 
         // Remove message from slot
-        c->sendRequestFullPieceCallbackSlot.clear();
+        c->sendRequestFullPieceCallbackSlot.pop_front();
     }
 
     // if so respond with some data
@@ -476,9 +495,6 @@ void SessionTest::completeExchange(SellerPeer & peer) {
         EXPECT_EQ(id, peer.id);
         EXPECT_EQ(receivedData, dataSent);
         EXPECT_EQ(index, requestedPiece);
-
-        // tell session that it was valid
-        session->validPieceReceivedOnConnection(peer.id, index);
 
         // clear call
         spy->fullPieceArrivedCallbackSlot.clear();
