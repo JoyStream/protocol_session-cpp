@@ -166,7 +166,8 @@ namespace protocol_session {
                                               const SentPayment<ConnectionIdType> & sentPayment,
                                               const protocol_wire::BuyerTerms & terms,
                                               const TorrentPieceInformation & information,
-                                              const AllSellersGone & allSellersGone) {
+                                              const AllSellersGone & allSellersGone,
+                                              std::chrono::duration<double> maxTimeToServicePiece) {
 
         // Prepare for exiting current state
         switch(_mode) {
@@ -210,7 +211,8 @@ namespace protocol_session {
                                                        sentPayment,
                                                        terms,
                                                        information,
-                                                       allSellersGone);
+                                                       allSellersGone,
+                                                       maxTimeToServicePiece);
     }
 
     template <class ConnectionIdType>

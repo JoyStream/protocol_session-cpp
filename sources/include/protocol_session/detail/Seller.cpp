@@ -127,6 +127,9 @@ namespace detail {
         if(_piecesAwaitingArrival.size() == 0)
             return false;
 
+        if(timeOutLimit == std::chrono::duration<double>::zero())
+            return false;
+
         // Get current time
         auto now = std::chrono::high_resolution_clock::now();
 
