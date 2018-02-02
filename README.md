@@ -1,7 +1,7 @@
 
 # ProtocolSession
 
-conan package name: `ProtocolSession/0.1.4@joystream/stable`
+conan package name: `ProtocolSession/0.2.0@joystream/stable`
 
 ### Dependencies
 
