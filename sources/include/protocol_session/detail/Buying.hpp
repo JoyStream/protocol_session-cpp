@@ -48,7 +48,8 @@ public:
            const SentPayment<ConnectionIdType> &,
            const protocol_wire::BuyerTerms &,
            const TorrentPieceInformation &,
-           const AllSellersGone &);
+           const AllSellersGone &,
+           std::chrono::duration<double> = std::chrono::duration<double>::zero());
 
     //// Connection level client events
 
@@ -57,9 +58,6 @@ public:
 
     // Remove connection
     void removeConnection(const ConnectionIdType &);
-
-    // Disconnect seller connections if it has taken longer than `limit` to service next expected piece
-    void disconnectSlowSellers(const std::chrono::duration<double> & limit);
 
     // Transition to BuyingState::sending_invitations
     void startDownloading(const Coin::Transaction & contractTx,
@@ -188,6 +186,8 @@ private:
     // Maximum number of concurrent requests to send before waiting for piece responses
     // The optimum value depends on many factors. It is hardcoded to 4 for now.
     const int _maxConcurrentRequests;
+
+    std::chrono::duration<double> _maxTimeToServicePiece;
 };
 
 }

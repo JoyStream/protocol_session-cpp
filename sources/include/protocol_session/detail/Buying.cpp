@@ -28,7 +28,8 @@ namespace detail {
                                      const SentPayment<ConnectionIdType> & sentPayment,
                                      const protocol_wire::BuyerTerms & terms,
                                      const TorrentPieceInformation & information,
-                                     const AllSellersGone & allSellersGone)
+                                     const AllSellersGone & allSellersGone,
+                                     std::chrono::duration<double> maxTimeToServicePiece)
         : _session(session)
         , _removedConnection(removedConnection)
         , _fullPieceArrived(fullPieceArrived)
@@ -37,7 +38,8 @@ namespace detail {
         , _terms(terms)
         , _numberOfMissingPieces(0)
         , _allSellersGone(allSellersGone)
-        , _maxConcurrentRequests(4) {
+        , _maxConcurrentRequests(4)
+        , _maxTimeToServicePiece(maxTimeToServicePiece) {
         //, _lastStartOfSendingInvitations(0) {
 
         // Setup pieces
@@ -84,20 +86,6 @@ namespace detail {
             throw exception::ConnectionDoesNotExist<ConnectionIdType>(id);
 
         removeConnection(id, DisconnectCause::client);
-    }
-
-    template <class ConnectionIdType>
-    void Buying<ConnectionIdType>::disconnectSlowSellers(const std::chrono::duration<double> & limit) {
-
-      for(auto mapping : _sellers) {
-        auto seller = mapping.second;
-
-        if (seller.isGone()) continue;
-
-        if (seller.servicingPieceHasTimedOut(limit)) {
-          removeConnection(seller.connection()->connectionId(), DisconnectCause::seller_servicing_piece_has_timed_out);
-        }
-      }
     }
 
     template <class ConnectionIdType>
@@ -286,8 +274,8 @@ namespace detail {
         // Only process if we are active
         if(_session->_state == SessionState::started) {
 
+            // Disconnect timed out sellers
             // Allocate pieces if we are downloading
-            // Timeout sellers if they have not seviced a piece in time.
             // Reset state to allow restarting downloading after all sellers are gone
             if(_state == BuyingState::downloading) {
 
@@ -296,8 +284,16 @@ namespace detail {
                     // Reference to seller
                     detail::Seller<ConnectionIdType> & s = mapping.second;
 
+                    if (s.isGone()) continue;
+
+                    // Disconnect if seller timed-out servicing request
+                    if (s.servicingPieceHasTimedOut(_maxTimeToServicePiece)) {
+                      removeConnection(s.connection()->connectionId(), DisconnectCause::seller_servicing_piece_has_timed_out);
+                      continue;
+                    }
+
                     // A seller may be waiting to be assigned a new piece
-                    if(!s.isGone() && s.piecesAwaitingArrival().size() == 0) {
+                    if(s.piecesAwaitingArrival().size() == 0) {
 
                         // This can happen when a seller has previously uploaded a valid piece,
                         // but there were no unassigned pieces at that time,

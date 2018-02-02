@@ -15,6 +15,7 @@
 #include <protocol_session/SessionState.hpp>
 
 #include <unordered_map>
+#include <chrono>
 
 // ConnectionIdType: Type for identifying connections.
 // 1) must be possible to use as key in std::map
@@ -87,7 +88,8 @@ namespace detail {
                        const SentPayment<ConnectionIdType> &,
                        const protocol_wire::BuyerTerms &,
                        const TorrentPieceInformation &,
-                       const AllSellersGone &);
+                       const AllSellersGone &,
+                       std::chrono::duration<double> = std::chrono::duration<double>::zero());
 
         /**
          * Warning: Do not call any of these operations
