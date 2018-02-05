@@ -21,7 +21,8 @@ namespace protocol_session {
 
 SessionTest::SessionTest() :
     session(nullptr),
-    spy(nullptr) {
+    spy(nullptr),
+    defaultPieceValidationResult(true) {
 }
 
 void SessionTest::init(Coin::Network network) {
