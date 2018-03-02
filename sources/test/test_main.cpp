@@ -10,7 +10,7 @@ using namespace joystream::protocol_session;
 
 TEST_F(SessionTest, observing)
 {
-    init();
+    init(Coin::Network::testnet3);
 
     // to observe mode
     toObserveMode();
@@ -50,7 +50,7 @@ TEST_F(SessionTest, observing)
 
 TEST_F(SessionTest, selling_basic)
 {
-    init();
+    init(Coin::Network::testnet3);
 
     // to observe mode
     toSellMode(protocol_wire::SellerTerms(22, 134, 1, 88, 32), 0);
@@ -90,7 +90,7 @@ TEST_F(SessionTest, selling_basic)
 
 TEST_F(SessionTest, selling)
 {
-    init();
+    init(Coin::Network::testnet3);
 
     protocol_wire::SellerTerms sellerTerms(22, 134, 10, 88, 32);
     protocol_wire::BuyerTerms buyerTerms(24, 200, 2, 400);
@@ -117,7 +117,7 @@ TEST_F(SessionTest, selling)
     addBuyerAndGoToReadyForPieceRequest(peer, buyerTerms, ready, payeeContractPk, payeeFinalScriptHash);
 
     // Do sequence of data for payments exchanges
-    paymentchannel::Payor payor = getPayor(sellerTerms, ready, payorContractSk, payeeContractPk, payeeFinalScriptHash);
+    paymentchannel::Payor payor = getPayor(sellerTerms, ready, payorContractSk, payeeContractPk, payeeFinalScriptHash, Coin::Network::testnet3);
 
     exchangeDataForPayment(peer, numberOfExchangesWhileStarted, payor);
 
@@ -216,7 +216,7 @@ TEST_F(SessionTest, selling_buyer_invited_with_bad_terms)
 
 TEST_F(SessionTest, selling_buyer_requested_invalid_piece)
 {
-    init();
+    init(Coin::Network::testnet3);
 
     int invalidPieceIndex = 1337;
     ID peer = 0;
@@ -252,7 +252,7 @@ TEST_F(SessionTest, selling_buyer_requested_invalid_piece)
 
 TEST_F(SessionTest, selling_buyer_interrupted_payment)
 {
-    init();
+    init(Coin::Network::testnet3);
 
     int pieceIndex = 0;
     ID peer = 0;
@@ -283,7 +283,7 @@ TEST_F(SessionTest, selling_buyer_interrupted_payment)
 
 TEST_F(SessionTest, selling_buyer_sent_invalid_payment)
 {
-    init();
+    init(Coin::Network::testnet3);
 
     int pieceIndex = 0;
     protocol_wire::PieceData data;
@@ -324,7 +324,7 @@ TEST_F(SessionTest, selling_buyer_sent_invalid_payment)
 
 TEST_F(SessionTest, selling_buyer_disappears)
 {
-    init();
+    init(Coin::Network::testnet3);
 
     ID peer = 0;
     uint numberOfExchangesBeforeDisappearance = 5;
@@ -351,7 +351,7 @@ TEST_F(SessionTest, selling_buyer_disappears)
     addBuyerAndGoToReadyForPieceRequest(peer, buyerTerms, ready, payeeContractPk, payeeFinalScriptHash);
 
     // Do sequence of data for payments exchanges
-    paymentchannel::Payor payor = getPayor(sellerTerms, ready, payorContractSk, payeeContractPk, payeeFinalScriptHash);
+    paymentchannel::Payor payor = getPayor(sellerTerms, ready, payorContractSk, payeeContractPk, payeeFinalScriptHash, Coin::Network::testnet3);
 
     exchangeDataForPayment(peer, numberOfExchangesBeforeDisappearance, payor);
 
@@ -361,7 +361,7 @@ TEST_F(SessionTest, selling_buyer_disappears)
     // make sure we are notified about claiming last payment
     {
         ID removedPeer;
-        joystream::paymentchannel::Payee payee;
+        joystream::paymentchannel::Payee payee(Coin::Network::testnet3);
         EXPECT_TRUE(spy->claimLastPaymentCallbackSlot.size() == 1);
 
         std::tie(removedPeer, payee) = spy->claimLastPaymentCallbackSlot.front();
@@ -378,7 +378,7 @@ TEST_F(SessionTest, selling_buyer_disappears)
 
 TEST_F(SessionTest, buying_basic)
 {
-    init();
+    init(Coin::Network::testnet3);
 
     // To buy mode
     toBuyMode(protocol_wire::BuyerTerms(), TorrentPieceInformation());
@@ -414,14 +414,14 @@ TEST_F(SessionTest, buying_basic)
 
 TEST_F(SessionTest, buying)
 {
-    init();
+    init(Coin::Network::testnet3);
 
     // min #sellers = 3
     protocol_wire::BuyerTerms buyerTerms(24, 200, 3, 400);
-    SellerPeer first(0, protocol_wire::SellerTerms(22, 134, 10, 88, 32), 2075),
-               second(1, protocol_wire::SellerTerms(4, 13, 11, 88, 32), 1234),
-               third(2, protocol_wire::SellerTerms(1, 2, 3, 88, 32), 123),
-               bad(3, protocol_wire::SellerTerms(),765);
+    SellerPeer first(0, protocol_wire::SellerTerms(22, 134, 10, 88, 32), 2075, session->network()),
+               second(1, protocol_wire::SellerTerms(4, 13, 11, 88, 32), 1234, session->network()),
+               third(2, protocol_wire::SellerTerms(1, 2, 3, 88, 32), 123, session->network()),
+               bad(3, protocol_wire::SellerTerms(),765, session->network());
 
     assert(buyerTerms.satisfiedBy(first.terms));
     assert(buyerTerms.satisfiedBy(second.terms));
@@ -497,7 +497,7 @@ TEST_F(SessionTest, buying)
                BuyerSellerRelationship(StartDownloadConnectionInformation(second.terms, 1, 2222222, Coin::KeyPair(nextPrivateKey()), nextPrivateKey().toPublicKey().toPubKeyHash()), second),
                BuyerSellerRelationship(StartDownloadConnectionInformation(third.terms,  2, 3333333, Coin::KeyPair(nextPrivateKey()), nextPrivateKey().toPublicKey().toPubKeyHash()), third)};
 
-    Coin::Transaction contractTx = simpleContract(v);
+    Coin::Transaction contractTx = simpleContract(v, Coin::Network::testnet3);
 
     first.assertContractValidity(contractTx);
     second.assertContractValidity(contractTx);
@@ -534,12 +534,12 @@ TEST_F(SessionTest, buying)
 
 TEST_F(SessionTest, buying_seller_has_interrupted_contract)
 {
-    init();
+    init(Coin::Network::testnet3);
 
     // min #sellers = 1
     protocol_wire::BuyerTerms buyerTerms(24, 200, 1, 400);
 
-    SellerPeer first(0, protocol_wire::SellerTerms(22, 134, 10, 88, 32),5634);
+    SellerPeer first(0, protocol_wire::SellerTerms(22, 134, 10, 88, 32),5634, session->network());
 
     assert(buyerTerms.satisfiedBy(first.terms));
 
@@ -598,11 +598,11 @@ TEST_F(SessionTest, buying_seller_has_interrupted_contract)
 
 TEST_F(SessionTest, buying_seller_sent_invalid_piece)
 {
-    init();
+    init(Coin::Network::testnet3);
 
     // min #sellers = 1
     protocol_wire::BuyerTerms buyerTerms(24, 200, 1, 400);
-    SellerPeer first(0, protocol_wire::SellerTerms(22, 134, 10, 88, 32), 543);
+    SellerPeer first(0, protocol_wire::SellerTerms(22, 134, 10, 88, 32), 543, session->network());
 
     assert(buyerTerms.satisfiedBy(first.terms));
 

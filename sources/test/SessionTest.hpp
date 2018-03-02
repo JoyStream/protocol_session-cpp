@@ -25,14 +25,13 @@ public:
     SessionTest();
 
     // Runs before & after each unit, creates/deletes up session and spy
-    void init();
+    void init(Coin::Network);
     void cleanup();
 
 //private:
     //// NB: None of these routines can return values, as they use QTest macroes which dont return this value.
 
     // Variable shared across all units tests
-    //Coin::Network network;
     Session<ID> * session;
     SessionSpy<ID> * spy;
 
@@ -49,7 +48,8 @@ public:
                                           const protocol_wire::Ready &,
                                           const Coin::PrivateKey &,
                                           const Coin::PublicKey &,
-                                          const Coin::PubKeyHash &payeeFinalPkHash);
+                                          const Coin::PubKeyHash &payeeFinalPkHash,
+                                          Coin::Network network);
 
     //// Routines for doing spesific set of tests which can be used across number of cases
     //// Spy is always reset, if affected, by each call
@@ -147,11 +147,15 @@ public:
         protocol_wire::Ready ready;
         paymentchannel::Payee payee;
 
-        SellerPeer(ID id, protocol_wire::SellerTerms terms, uint32_t sellerTermsIndex)
+        Coin::Network network;
+
+        SellerPeer(ID id, protocol_wire::SellerTerms terms, uint32_t sellerTermsIndex, Coin::Network network)
             : id(id)
             , terms(terms)
             , sellerTermsIndex(sellerTermsIndex)
-            , spy(nullptr) {
+            , spy(nullptr)
+            , network(network)
+            , payee(network) {
         }
         protocol_wire::JoiningContract setJoiningContract() {
             contractKeys = Coin::KeyPair::generate();
@@ -166,7 +170,7 @@ public:
             auto slot = spy->sendReadyCallbackSlot;
             EXPECT_GT((int)slot.size(), 0);
             ready = std::get<0>(slot.front());
-            payee = getPayee();
+            payee = getPayee(network);
             // Remove message at front
             slot.pop_front();
         }
@@ -187,7 +191,7 @@ public:
             return spy->sendRequestFullPieceCallbackSlot.size() > 0;
         }
 
-        paymentchannel::Payee getPayee() {
+        paymentchannel::Payee getPayee(Coin::Network network) {
             return paymentchannel::Payee(0,
                                          Coin::RelativeLockTime::fromTimeUnits(terms.minLock()),
                                          terms.minPrice(),
@@ -198,13 +202,14 @@ public:
                                          joiningContract.finalPkHash(),
                                          ready.contractPk(),
                                          ready.finalPkHash(),
-                                         Coin::Signature());
+                                         Coin::Signature(),
+                                         network);
         }
     };
 
     typedef std::pair<StartDownloadConnectionInformation, SellerPeer> BuyerSellerRelationship;
 
-    static Coin::Transaction simpleContract(const std::vector<BuyerSellerRelationship> & v) {
+    static Coin::Transaction simpleContract(const std::vector<BuyerSellerRelationship> & v, Coin::Network network) {
         paymentchannel::ContractTransactionBuilder::Commitments commitments;
         for(auto s : v) {
             StartDownloadConnectionInformation inf = s.first;
@@ -216,7 +221,7 @@ public:
         paymentchannel::ContractTransactionBuilder builder;
         builder.setCommitments(commitments);
 
-        return builder.transaction();
+        return builder.transaction(network);
     }
 
     static PeerToStartDownloadInformationMap<ID> downloadInformationMap(const std::vector<BuyerSellerRelationship> & v) noexcept {

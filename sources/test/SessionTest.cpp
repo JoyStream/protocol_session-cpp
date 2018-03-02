@@ -19,19 +19,18 @@ namespace protocol_session {
     }
 }}
 
-SessionTest::SessionTest()
-    : //network(Coin::Network::testnet3)
-    session(nullptr)
-    , spy(nullptr)
-    , defaultPieceValidationResult(true) {
+SessionTest::SessionTest() :
+    session(nullptr),
+    spy(nullptr),
+    defaultPieceValidationResult(true) {
 }
 
-void SessionTest::init() {
+void SessionTest::init(Coin::Network network) {
 
     // Reset next key counter
     nextKey = 1;
 
-    session = new Session<ID>();
+    session = new Session<ID>(network);
 
     spy = new
     SessionSpy<ID>(
@@ -116,7 +115,8 @@ paymentchannel::Payor SessionTest::getPayor(const protocol_wire::SellerTerms & s
                                      const protocol_wire::Ready & ready,
                                      const Coin::PrivateKey & payorContractSk,
                                      const Coin::PublicKey & payeeContractPk,
-                                     const Coin::PubKeyHash & payeeFinalPkHash) {
+                                     const Coin::PubKeyHash & payeeFinalPkHash,
+                                     Coin::Network network) {
    return paymentchannel::Payor(sellerTerms.minPrice(),
                                 0,
                                 ready.value(),
@@ -126,7 +126,8 @@ paymentchannel::Payor SessionTest::getPayor(const protocol_wire::SellerTerms & s
                                 Coin::KeyPair(payorContractSk),
                                 ready.finalPkHash(),
                                 payeeContractPk,
-                                payeeFinalPkHash);
+                                payeeFinalPkHash,
+                                network);
 }
 
 ////
@@ -538,7 +539,7 @@ void SessionTest::takeSingleSellerToExchange(SellerPeer & peer) {
 
     // Setup
     auto v = { BuyerSellerRelationship(StartDownloadConnectionInformation(peer.terms,  0, 9999999, Coin::KeyPair(nextPrivateKey()), nextPrivateKey().toPublicKey().toPubKeyHash()), peer)};
-    Coin::Transaction contractTx = simpleContract(v);
+    Coin::Transaction contractTx = simpleContract(v, session->network());
     peer.assertContractValidity(contractTx);
     PeerToStartDownloadInformationMap<ID> map = downloadInformationMap(v);
 

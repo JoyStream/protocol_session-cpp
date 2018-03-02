@@ -11,6 +11,9 @@
 #include <protocol_statemachine/protocol_statemachine.hpp>
 #include <protocol_session/detail/PieceDeliveryPipeline.hpp>
 
+#include <common/Network.hpp>
+#include <queue>
+
 namespace joystream {
 namespace protocol_wire {
     class Message;
@@ -42,7 +45,8 @@ namespace detail {
                    const protocol_statemachine::SellerInterruptedContract &,
                    const protocol_statemachine::ReceivedFullPiece &,
                    const protocol_statemachine::MessageOverflow &,
-                   const protocol_statemachine::MessageOverflow &);
+                   const protocol_statemachine::MessageOverflow &,
+                   Coin::Network network);
 
         // Processes given message
         template<class M>
