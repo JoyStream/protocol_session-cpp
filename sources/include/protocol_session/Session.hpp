@@ -57,7 +57,7 @@ namespace detail {
         static int64_t minimumFundsRequiredAsBuyer(const protocol_wire::BuyerTerms & terms, int numberOfPieces);
          */
 
-        Session();
+        Session(Coin::Network);
 
         ~Session();
 
@@ -203,6 +203,8 @@ namespace detail {
         // Status of session
         status::Session<ConnectionIdType> status() const noexcept;
 
+        Coin::Network network() const;
+
     private:
 
         // Session mode
@@ -216,6 +218,8 @@ namespace detail {
 
         // When session was started
         time_t _started;
+
+        Coin::Network _network;
 
         //// Substates
 

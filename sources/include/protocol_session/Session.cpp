@@ -41,12 +41,13 @@ namespace protocol_session {
     */
 
     template <class ConnectionIdType>
-    Session<ConnectionIdType>::Session()
+    Session<ConnectionIdType>::Session(Coin::Network network)
         : _mode(SessionMode::not_set)
         , _state(SessionState::stopped)
         , _observing(nullptr)
         , _selling(nullptr)
-        , _buying(nullptr) {
+        , _buying(nullptr)
+        , _network(network) {
 
         time(&_started);
     }
@@ -740,6 +741,11 @@ namespace protocol_session {
     }
 
     template<class ConnectionIdType>
+    Coin::Network Session<ConnectionIdType>::network() const {
+      return _network;
+    }
+
+    template<class ConnectionIdType>
     void Session<ConnectionIdType>::peerAnnouncedModeAndTerms(const ConnectionIdType & id, const protocol_statemachine::AnnouncedModeAndTerms & a) {
 
         assert(hasConnection(id));
@@ -924,7 +930,8 @@ namespace protocol_session {
         [this, id]() { this->sellerHasInterruptedContract(id); },
         [this, id](const protocol_wire::PieceData & p) { this->receivedFullPiece(id, p); },
         [this, id]() { this->remoteMessageOverflow(id); },
-        [this, id]() { this->localMessageOverflow(id); });
+        [this, id]() { this->localMessageOverflow(id); },
+        _network);
     }
 
     template <class ConnectionIdType>

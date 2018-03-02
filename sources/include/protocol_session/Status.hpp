@@ -24,8 +24,8 @@ namespace status {
 
     struct CBStateMachine {
 
-        CBStateMachine()
-            : innerStateTypeIndex(typeid(protocol_statemachine::ChooseMode)) {}
+        // CBStateMachine()
+        //     : innerStateTypeIndex(typeid(protocol_statemachine::ChooseMode)) {}
 
         CBStateMachine(const std::type_index & innerStateTypeIndex,
                        const protocol_statemachine::AnnouncedModeAndTerms & announcedModeAndTermsFromPeer,
