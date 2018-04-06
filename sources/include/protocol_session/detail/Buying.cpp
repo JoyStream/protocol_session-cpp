@@ -590,8 +590,8 @@ namespace detail {
     void Buying<ConnectionIdType>::removeSeller(detail::Seller<ConnectionIdType> & s) {
         if (s.isGone()) return;
 
-        // we must be downloading
-        assert(_state == BuyingState::downloading);
+        // we must be downloading or just finish downloading
+        assert(_state == BuyingState::downloading || _state == BuyingState::download_completed);
 
         // If this seller has assigned piecees, then we must unassign them
         for(uint i = 0;i < _pieces.size();i++) {
