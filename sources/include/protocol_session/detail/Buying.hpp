@@ -70,6 +70,7 @@ public:
     void sellerHasInterruptedContract(const ConnectionIdType &);
     void receivedFullPiece(const ConnectionIdType &, const protocol_wire::PieceData &);
     void remoteMessageOverflow(const ConnectionIdType &);
+    void sellerCompletedSpeedTest(const ConnectionIdType &, bool);
 
     //// Change mode
 
@@ -113,6 +114,8 @@ public:
 private:
 
     void sendInvitations () const;
+
+    void maybeInviteSeller(detail::Connection<ConnectionIdType> *, protocol_statemachine::AnnouncedModeAndTerms) const;
 
     void resetIfAllSellersGone ();
 
@@ -188,6 +191,10 @@ private:
     const int _maxConcurrentRequests;
 
     std::chrono::duration<double> _maxTimeToServicePiece;
+
+    // Do we need to ask sellers to perform a speed test
+    bool _speedTestPolicyEnabled;
+    uint32_t _speedTestPolicyPayloadSize;
 };
 
 }

@@ -13,6 +13,7 @@
 
 #include <common/Network.hpp>
 #include <queue>
+#include <chrono>
 
 namespace joystream {
 namespace protocol_wire {
@@ -46,6 +47,8 @@ namespace detail {
                    const protocol_statemachine::ReceivedFullPiece &,
                    const protocol_statemachine::MessageOverflow &,
                    const protocol_statemachine::MessageOverflow &,
+                   const protocol_statemachine::SellerCompletedSpeedTest &,
+                   const protocol_statemachine::BuyerRequestedSpeedTest &,
                    Coin::Network network);
 
         // Processes given message
@@ -83,6 +86,10 @@ namespace detail {
 
         PieceDeliveryPipeline & pieceDeliveryPipeline();
 
+        bool performedSpeedTest() const;
+        void startingSpeedTest();
+        void completedSpeedTest();
+
     private:
 
         // Connection id
@@ -93,9 +100,16 @@ namespace detail {
 
         //// Buyer
 
-
         //// Selling
         PieceDeliveryPipeline _pieceDeliveryPipeline;
+
+        //// Speed Testing - used by when buying and selling
+        // buyer: records time when request to seller was sent
+        // seller: records time when request arrived from buyer
+        boost::optional<std::chrono::high_resolution_clock::time_point> _startedSpeedTestAt;
+
+        // buyer: records time when the test payload was received from seller
+        boost::optional<std::chrono::high_resolution_clock::time_point> _completedSpeedTestAt;
 
     };
 

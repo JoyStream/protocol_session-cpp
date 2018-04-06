@@ -69,6 +69,7 @@ public:
     void receivedValidPayment(const ConnectionIdType &, const Coin::Signature &);
     void receivedInvalidPayment(const ConnectionIdType &, const Coin::Signature &);
     void remoteMessageOverflow(const ConnectionIdType &);
+    void buyerRequestedSpeedTest(const ConnectionIdType &, uint32_t);
 
     //// Change mode
 

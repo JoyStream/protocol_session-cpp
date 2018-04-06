@@ -39,7 +39,9 @@ namespace detail {
         , _numberOfMissingPieces(0)
         , _allSellersGone(allSellersGone)
         , _maxConcurrentRequests(4)
-        , _maxTimeToServicePiece(maxTimeToServicePiece) {
+        , _maxTimeToServicePiece(maxTimeToServicePiece)
+        , _speedTestPolicyEnabled(false)
+        , _speedTestPolicyPayloadSize(500000) {
         //, _lastStartOfSendingInvitations(0) {
 
         // Setup pieces
@@ -137,14 +139,10 @@ namespace detail {
 
             // Check that this peer is seller,
             protocol_statemachine::ModeAnnounced m = a.modeAnnounced();
+
             assert(m != protocol_statemachine::ModeAnnounced::none);
 
-            // and has good enough terms to warrant an invitation,
-            // then send invitation
-            if(m == protocol_statemachine::ModeAnnounced::sell && _terms.satisfiedBy(a.sellModeTerms())) {
-                c->processEvent(protocol_statemachine::event::InviteSeller());
-                std::cout << "Invited: " << IdToString(id) << std::endl;
-            }
+            maybeInviteSeller(c, a);
         }
     }
 
@@ -211,6 +209,25 @@ namespace detail {
     void Buying<ConnectionIdType>::remoteMessageOverflow(const ConnectionIdType & id) {
       std::clog << "Error: remoteMessageOverflow from seller connection " << id << std::endl;
       removeConnection(id, DisconnectCause::seller_message_overflow);
+    }
+
+    template<class ConnectionIdType>
+    void Buying<ConnectionIdType>::sellerCompletedSpeedTest(const ConnectionIdType & id, bool successful) {
+
+      detail::Connection<ConnectionIdType> * c = _session->get(id);
+
+      if (!successful) {
+        // Remove connection
+        removeConnection(id, DisconnectCause::seller_failed_speed_test);
+
+        // Notify state machine about deletion
+        throw protocol_statemachine::exception::StateMachineDeletedException();
+
+      } else {
+        // record completion time
+        c->completedSpeedTest();
+      }
+
     }
 
     template <class ConnectionIdType>
@@ -509,15 +526,32 @@ namespace detail {
           // Check that this peer is seller,
           protocol_statemachine::AnnouncedModeAndTerms a = c->announcedModeAndTermsFromPeer();
 
-          // and has good enough terms to warrant an invitation,
-          // then send invitation
-          if(a.modeAnnounced() == protocol_statemachine::ModeAnnounced::sell && _terms.satisfiedBy(a.sellModeTerms())) {
-
-              c->processEvent(protocol_statemachine::event::InviteSeller());
-
-              std::cout << "Invited: " << IdToString(mapping.first) << std::endl;
-          }
+          maybeInviteSeller(c, a);
       }
+    }
+
+    template <class ConnectionIdType>
+    void Buying<ConnectionIdType>::maybeInviteSeller(detail::Connection<ConnectionIdType> * c,
+      protocol_statemachine::AnnouncedModeAndTerms a) const {
+
+        assert(_session->_state == SessionState::started);
+        assert(_state == BuyingState::sending_invitations);
+
+        // Do not send invitations if peer is not announcing sell mode or has incompatible terms
+        if(a.modeAnnounced() != protocol_statemachine::ModeAnnounced::sell || !_terms.satisfiedBy(a.sellModeTerms())) {
+          return;
+        }
+
+        // Does seller need to complete a speed test to be invited
+        if (_speedTestPolicyEnabled && !c->performedSpeedTest()) {
+            c->startingSpeedTest(); // record starting time
+            c->processEvent(protocol_statemachine::event::TestSellerSpeed(_speedTestPolicyPayloadSize));
+            return;
+        }
+
+        // Seller has previously completed a speed test/or no speed test was required.. invite them
+        c->processEvent(protocol_statemachine::event::InviteSeller());
+        std::cout << "Invited: " << IdToString(c->connectionId()) << std::endl;
     }
 
     template <class ConnectionIdType>

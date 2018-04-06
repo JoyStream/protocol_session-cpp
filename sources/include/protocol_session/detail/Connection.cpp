@@ -30,6 +30,8 @@ namespace detail {
                                              const protocol_statemachine::ReceivedFullPiece & receivedFullPiece,
                                              const protocol_statemachine::MessageOverflow & remoteMessageOverflow,
                                              const protocol_statemachine::MessageOverflow & localMessageOverflow,
+                                             const protocol_statemachine::SellerCompletedSpeedTest & sellerCompletedSpeedTest,
+                                             const protocol_statemachine::BuyerRequestedSpeedTest & buyerRequestedSpeedTest,
                                              Coin::Network network)
         : _connectionId(connectionId)
         , _machine(peerAnnouncedMode,
@@ -47,8 +49,12 @@ namespace detail {
                    receivedFullPiece,
                    remoteMessageOverflow,
                    localMessageOverflow,
+                   sellerCompletedSpeedTest,
+                   buyerRequestedSpeedTest,
                    0,
                    network) {
+        // , _startedSpeedTestAt(std::chrono::duration<double>::zero())
+        // , _completedSpeedTestAt(std::chrono::duration<double>::zero()) {
 
         // Initiating state machine
         _machine.initiate();
@@ -120,6 +126,21 @@ namespace detail {
     template <class ConnectionIdType>
     PieceDeliveryPipeline & Connection<ConnectionIdType>::pieceDeliveryPipeline() {
       return _pieceDeliveryPipeline;
+    }
+
+    template <class ConnectionIdType>
+    bool Connection<ConnectionIdType>::performedSpeedTest() const {
+      return !!_completedSpeedTestAt;
+    }
+
+    template <class ConnectionIdType>
+    void Connection<ConnectionIdType>::startingSpeedTest() {
+      _startedSpeedTestAt = std::chrono::high_resolution_clock::now();
+    }
+
+    template <class ConnectionIdType>
+    void Connection<ConnectionIdType>::completedSpeedTest() {
+      _completedSpeedTestAt = std::chrono::high_resolution_clock::now();
     }
 }
 }

@@ -254,6 +254,8 @@ namespace detail {
         void receivedFullPiece(const ConnectionIdType &, const protocol_wire::PieceData &);
         void remoteMessageOverflow(const ConnectionIdType &);
         void localMessageOverflow(const ConnectionIdType &);
+        void buyerRequestedSpeedTest(const ConnectionIdType&, uint32_t);
+        void sellerCompletedSpeedTest(const ConnectionIdType&, bool);
 
         //// Utility routines
 

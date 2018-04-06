@@ -270,6 +270,23 @@ namespace detail {
     }
 
     template<class ConnectionIdType>
+    void Selling<ConnectionIdType>::buyerRequestedSpeedTest(const ConnectionIdType & id, uint32_t payloadSize) {
+      // We cannot have connection and be stopped
+      assert(_session->state() != SessionState::stopped);
+
+      // Connection must be live
+      assert(_session->hasConnection(id));
+
+      auto connection = _session->get(id);
+
+      if (connection->performedSpeedTest()) {
+        removeConnection(id, DisconnectCause::buyer_requested_too_many_speed_tests);
+      } else {
+        connection->processEvent(protocol_statemachine::event::SendTestPayload());
+      }
+    }
+
+    template<class ConnectionIdType>
     void Selling<ConnectionIdType>::leavingState() {
 
         //// Mode change is allowed in all session states
