@@ -120,8 +120,8 @@ namespace detail {
                                                     status::CBStateMachine(_machine.getInnerStateTypeIndex(),
                                                                            _machine.announcedModeAndTermsFromPeer(),
                                                                            _machine.payor(),
-                                                                           _machine.payee()),
-                                                                           timeToDeliverTestPayload());
+                                                                           _machine.payee(),
+                                                                           timeToDeliverTestPayload()));
     }
 
     template <class ConnectionIdType>
