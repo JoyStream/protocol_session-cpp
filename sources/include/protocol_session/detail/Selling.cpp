@@ -279,9 +279,11 @@ namespace detail {
 
       auto connection = _session->get(id);
 
+      // Only one speed test is allowed
       if (connection->performedSpeedTest()) {
         removeConnection(id, DisconnectCause::buyer_requested_too_many_speed_tests);
       } else {
+        connection->startingSpeedTest();
         connection->processEvent(protocol_statemachine::event::SendTestPayload());
       }
     }

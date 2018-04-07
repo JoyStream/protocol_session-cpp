@@ -130,7 +130,13 @@ namespace detail {
 
     template <class ConnectionIdType>
     bool Connection<ConnectionIdType>::performedSpeedTest() const {
-      return !!_completedSpeedTestAt;
+
+      if (inState<protocol_statemachine::Selling>()) {
+        return !!_startedSpeedTestAt;
+      } else {
+        return !!_completedSpeedTestAt;
+      }
+
     }
 
     template <class ConnectionIdType>
