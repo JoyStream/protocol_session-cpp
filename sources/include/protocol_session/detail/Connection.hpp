@@ -92,6 +92,7 @@ namespace detail {
         bool hasStartedSpeedTest() const;
         bool hasCompletedSpeedTest() const;
         bool speedTestCompletedInLessThan(std::chrono::seconds);
+        int32_t timeToDeliverTestPayload() const;
 
     private:
 

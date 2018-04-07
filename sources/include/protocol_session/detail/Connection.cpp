@@ -120,7 +120,8 @@ namespace detail {
                                                     status::CBStateMachine(_machine.getInnerStateTypeIndex(),
                                                                            _machine.announcedModeAndTermsFromPeer(),
                                                                            _machine.payor(),
-                                                                           _machine.payee()));
+                                                                           _machine.payee()),
+                                                                           timeToDeliverTestPayload());
     }
 
     template <class ConnectionIdType>
@@ -151,6 +152,15 @@ namespace detail {
     template <class ConnectionIdType>
     bool Connection<ConnectionIdType>::speedTestCompletedInLessThan(std::chrono::seconds period) {
       return (*_completedSpeedTestAt - *_startedSpeedTestAt) <= period;
+    }
+
+    template <class ConnectionIdType>
+    int32_t Connection<ConnectionIdType>::timeToDeliverTestPayload() const {
+      if (!hasCompletedSpeedTest()) return -1;
+
+      auto deliveryTime = (*_completedSpeedTestAt - *_startedSpeedTestAt);
+
+      return deliveryTime.count();
     }
 }
 }
