@@ -290,6 +290,14 @@ namespace detail {
         throw protocol_statemachine::exception::StateMachineDeletedException();
 
       } else {
+
+        if (payloadSize > _session->speedTestPolicy().maxPayloadSize()) {
+          removeConnection(id, DisconnectCause::buyer_speed_test_payload_requested_too_large);
+
+          // Notify state machine about deletion
+          throw protocol_statemachine::exception::StateMachineDeletedException();
+        }
+
         connection->startingSpeedTest();
         connection->processEvent(protocol_statemachine::event::SendTestPayload());
         connection->endingSpeedTest();

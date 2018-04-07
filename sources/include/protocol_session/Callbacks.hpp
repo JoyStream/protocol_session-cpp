@@ -66,7 +66,9 @@ enum class DisconnectCause {
 
     buyer_message_overflow,
 
-    buyer_requested_too_many_speed_tests
+    buyer_requested_too_many_speed_tests,
+
+    buyer_speed_test_payload_requested_too_large
 };
 
 // Removal of a connection from the session: c++11 alias declaration
