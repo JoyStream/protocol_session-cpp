@@ -49,7 +49,8 @@ namespace detail {
                    const protocol_statemachine::MessageOverflow &,
                    const protocol_statemachine::SellerCompletedSpeedTest &,
                    const protocol_statemachine::BuyerRequestedSpeedTest &,
-                   Coin::Network network);
+                   Coin::Network network,
+                   const std::function<std::chrono::high_resolution_clock::time_point()> &);
 
         // Processes given message
         template<class M>
@@ -86,9 +87,11 @@ namespace detail {
 
         PieceDeliveryPipeline & pieceDeliveryPipeline();
 
-        bool performedSpeedTest() const;
         void startingSpeedTest();
-        void completedSpeedTest();
+        void endingSpeedTest();
+        bool hasStartedSpeedTest() const;
+        bool hasCompletedSpeedTest() const;
+        bool speedTestCompletedInLessThan(std::chrono::seconds);
 
     private:
 
@@ -111,6 +114,7 @@ namespace detail {
         // buyer: records time when the test payload was received from seller
         boost::optional<std::chrono::high_resolution_clock::time_point> _completedSpeedTestAt;
 
+        std::function<std::chrono::high_resolution_clock::time_point()> _getTime;
     };
 
     template <class ConnectionIdType>

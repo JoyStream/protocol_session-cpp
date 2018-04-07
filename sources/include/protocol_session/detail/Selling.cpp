@@ -267,6 +267,9 @@ namespace detail {
       std::clog << "Error: remoteMessageOverflow from buyer connection " << id << std::endl;
 
       removeConnection(id, DisconnectCause::buyer_message_overflow);
+
+      // Notify state machine about deletion
+      throw protocol_statemachine::exception::StateMachineDeletedException();
     }
 
     template<class ConnectionIdType>
@@ -279,12 +282,17 @@ namespace detail {
 
       auto connection = _session->get(id);
 
-      // Only one speed test is allowed
-      if (connection->performedSpeedTest()) {
+      // Only one speed test is allowed - allow more in the future?
+      if (connection->hasStartedSpeedTest()) {
         removeConnection(id, DisconnectCause::buyer_requested_too_many_speed_tests);
+
+        // Notify state machine about deletion
+        throw protocol_statemachine::exception::StateMachineDeletedException();
+
       } else {
         connection->startingSpeedTest();
         connection->processEvent(protocol_statemachine::event::SendTestPayload());
+        connection->endingSpeedTest();
       }
     }
 

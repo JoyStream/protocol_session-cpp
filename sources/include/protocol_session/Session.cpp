@@ -47,7 +47,8 @@ namespace protocol_session {
         , _observing(nullptr)
         , _selling(nullptr)
         , _buying(nullptr)
-        , _network(network) {
+        , _network(network)
+        , _getTime(std::chrono::high_resolution_clock::now) {
 
         time(&_started);
     }
@@ -953,7 +954,8 @@ namespace protocol_session {
         [this, id]() { this->localMessageOverflow(id); },
         [this, id](bool successful) { this->sellerCompletedSpeedTest(id, successful); },
         [this, id](uint32_t payloadSize) { this->buyerRequestedSpeedTest(id, payloadSize); },
-        _network);
+        _network,
+        _getTime);
     }
 
     template <class ConnectionIdType>
@@ -1036,5 +1038,21 @@ namespace protocol_session {
 
         return connection;
     }
+
+    template <class ConnectionIdType>
+    SpeedTestPolicy Session<ConnectionIdType>::speedTestPolicy() const {
+      return _speedTestPolicy;
+    }
+
+    template <class ConnectionIdType>
+    void Session<ConnectionIdType>::setSpeedTestPolicy(const SpeedTestPolicy policy) {
+      _speedTestPolicy = policy;
+    }
+
+    template <class ConnectionIdType>
+    void Session<ConnectionIdType>::setTimeGetter(const std::function<std::chrono::high_resolution_clock::time_point()> & timeGetter) {
+      _getTime = timeGetter;
+    }
+
 }
 }

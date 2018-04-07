@@ -39,9 +39,7 @@ namespace detail {
         , _numberOfMissingPieces(0)
         , _allSellersGone(allSellersGone)
         , _maxConcurrentRequests(4)
-        , _maxTimeToServicePiece(maxTimeToServicePiece)
-        , _speedTestPolicyEnabled(false)
-        , _speedTestPolicyPayloadSize(500000) {
+        , _maxTimeToServicePiece(maxTimeToServicePiece) {
         //, _lastStartOfSendingInvitations(0) {
 
         // Setup pieces
@@ -142,7 +140,7 @@ namespace detail {
 
             assert(m != protocol_statemachine::ModeAnnounced::none);
 
-            maybeInviteSeller(c, a);
+            maybeInviteSeller(c);
         }
     }
 
@@ -208,7 +206,11 @@ namespace detail {
     template<class ConnectionIdType>
     void Buying<ConnectionIdType>::remoteMessageOverflow(const ConnectionIdType & id) {
       std::clog << "Error: remoteMessageOverflow from seller connection " << id << std::endl;
+
       removeConnection(id, DisconnectCause::seller_message_overflow);
+
+      // Notify state machine about deletion
+      throw protocol_statemachine::exception::StateMachineDeletedException();
     }
 
     template<class ConnectionIdType>
@@ -225,7 +227,20 @@ namespace detail {
 
       } else {
         // record completion time
-        c->completedSpeedTest();
+        c->endingSpeedTest();
+
+        if (c->speedTestCompletedInLessThan(_session->speedTestPolicy().maxTimeToRespond())) {
+          // Invite seller if they met the speedTestPolicy requirement
+          maybeInviteSeller(c);
+
+        } else {
+          // otherwise disconnect them
+          removeConnection(id, DisconnectCause::seller_failed_speed_test);
+
+          // Notify state machine about deletion
+          throw protocol_statemachine::exception::StateMachineDeletedException();
+        }
+
       }
 
     }
@@ -523,29 +538,30 @@ namespace detail {
 
           detail::Connection<ConnectionIdType> * c = mapping.second;
 
-          // Check that this peer is seller,
-          protocol_statemachine::AnnouncedModeAndTerms a = c->announcedModeAndTermsFromPeer();
-
-          maybeInviteSeller(c, a);
+          maybeInviteSeller(c);
       }
+
     }
 
     template <class ConnectionIdType>
-    void Buying<ConnectionIdType>::maybeInviteSeller(detail::Connection<ConnectionIdType> * c,
-      protocol_statemachine::AnnouncedModeAndTerms a) const {
+    void Buying<ConnectionIdType>::maybeInviteSeller(detail::Connection<ConnectionIdType> * c) const {
 
         assert(_session->_state == SessionState::started);
         assert(_state == BuyingState::sending_invitations);
+
+        // Check that this peer is seller,
+        protocol_statemachine::AnnouncedModeAndTerms a = c->announcedModeAndTermsFromPeer();
 
         // Do not send invitations if peer is not announcing sell mode or has incompatible terms
         if(a.modeAnnounced() != protocol_statemachine::ModeAnnounced::sell || !_terms.satisfiedBy(a.sellModeTerms())) {
           return;
         }
 
-        // Does seller need to complete a speed test to be invited
-        if (_speedTestPolicyEnabled && !c->performedSpeedTest()) {
+        // Does seller need to complete a speed test to be invited?
+        if (_session->_speedTestPolicy.isEnabled() && !c->hasCompletedSpeedTest()) {
+            if (c->hasStartedSpeedTest()) return;
             c->startingSpeedTest(); // record starting time
-            c->processEvent(protocol_statemachine::event::TestSellerSpeed(_speedTestPolicyPayloadSize));
+            c->processEvent(protocol_statemachine::event::TestSellerSpeed(_session->_speedTestPolicy.payloadSize()));
             return;
         }
 

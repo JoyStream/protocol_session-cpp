@@ -459,6 +459,10 @@ void SessionTest::add(SellerPeer & peer) {
     addConnection(peer.id);
     peer.spy = spy->connectionSpies.at(peer.id);
     session->processMessageOnConnection(peer.id, protocol_wire::Sell(peer.terms, peer.sellerTermsIndex));
+
+    // Seller will automatically be speed tested, so we will have them send a speed test payload
+    auto payloadSize = session->speedTestPolicy().payloadSize();
+    session->processMessageOnConnection(peer.id, protocol_wire::SpeedTestPayload(payloadSize));
 }
 
 void SessionTest::completeExchange(SellerPeer & peer) {

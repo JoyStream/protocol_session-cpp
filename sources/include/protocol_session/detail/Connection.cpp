@@ -32,7 +32,8 @@ namespace detail {
                                              const protocol_statemachine::MessageOverflow & localMessageOverflow,
                                              const protocol_statemachine::SellerCompletedSpeedTest & sellerCompletedSpeedTest,
                                              const protocol_statemachine::BuyerRequestedSpeedTest & buyerRequestedSpeedTest,
-                                             Coin::Network network)
+                                             Coin::Network network,
+                                             const std::function<std::chrono::high_resolution_clock::time_point()> & getTime)
         : _connectionId(connectionId)
         , _machine(peerAnnouncedMode,
                    invitedToOutdatedContract,
@@ -52,9 +53,8 @@ namespace detail {
                    sellerCompletedSpeedTest,
                    buyerRequestedSpeedTest,
                    0,
-                   network) {
-        // , _startedSpeedTestAt(std::chrono::duration<double>::zero())
-        // , _completedSpeedTestAt(std::chrono::duration<double>::zero()) {
+                   network)
+        , _getTime(getTime) {
 
         // Initiating state machine
         _machine.initiate();
@@ -129,24 +129,28 @@ namespace detail {
     }
 
     template <class ConnectionIdType>
-    bool Connection<ConnectionIdType>::performedSpeedTest() const {
+    bool Connection<ConnectionIdType>::hasStartedSpeedTest() const {
+      return !!_startedSpeedTestAt;
+    }
 
-      if (inState<protocol_statemachine::Selling>()) {
-        return !!_startedSpeedTestAt;
-      } else {
-        return !!_completedSpeedTestAt;
-      }
-
+    template <class ConnectionIdType>
+    bool Connection<ConnectionIdType>::hasCompletedSpeedTest() const {
+      return !!_completedSpeedTestAt;
     }
 
     template <class ConnectionIdType>
     void Connection<ConnectionIdType>::startingSpeedTest() {
-      _startedSpeedTestAt = std::chrono::high_resolution_clock::now();
+      _startedSpeedTestAt = _getTime();
     }
 
     template <class ConnectionIdType>
-    void Connection<ConnectionIdType>::completedSpeedTest() {
-      _completedSpeedTestAt = std::chrono::high_resolution_clock::now();
+    void Connection<ConnectionIdType>::endingSpeedTest() {
+      _completedSpeedTestAt = _getTime();
+    }
+
+    template <class ConnectionIdType>
+    bool Connection<ConnectionIdType>::speedTestCompletedInLessThan(std::chrono::seconds period) {
+      return (*_completedSpeedTestAt - *_startedSpeedTestAt) < period;
     }
 }
 }

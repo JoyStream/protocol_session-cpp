@@ -13,6 +13,7 @@
 #include <protocol_session/Callbacks.hpp>
 #include <protocol_session/SessionMode.hpp>
 #include <protocol_session/SessionState.hpp>
+#include <protocol_session/SpeedTestPolicy.hpp>
 
 #include <unordered_map>
 #include <chrono>
@@ -205,6 +206,12 @@ namespace detail {
 
         Coin::Network network() const;
 
+        SpeedTestPolicy speedTestPolicy() const;
+
+        void setSpeedTestPolicy(const SpeedTestPolicy);
+
+        void setTimeGetter(const std::function<std::chrono::high_resolution_clock::time_point()> &);
+
     private:
 
         // Session mode
@@ -220,6 +227,11 @@ namespace detail {
         time_t _started;
 
         Coin::Network _network;
+
+        std::function<std::chrono::high_resolution_clock::time_point()> _getTime;
+
+        SpeedTestPolicy _speedTestPolicy;
+
 
         //// Substates
 

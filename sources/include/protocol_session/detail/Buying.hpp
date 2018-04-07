@@ -115,7 +115,7 @@ private:
 
     void sendInvitations () const;
 
-    void maybeInviteSeller(detail::Connection<ConnectionIdType> *, protocol_statemachine::AnnouncedModeAndTerms) const;
+    void maybeInviteSeller(detail::Connection<ConnectionIdType> *) const;
 
     void resetIfAllSellersGone ();
 
