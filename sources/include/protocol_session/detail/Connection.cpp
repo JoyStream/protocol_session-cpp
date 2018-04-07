@@ -150,7 +150,7 @@ namespace detail {
 
     template <class ConnectionIdType>
     bool Connection<ConnectionIdType>::speedTestCompletedInLessThan(std::chrono::seconds period) {
-      return (*_completedSpeedTestAt - *_startedSpeedTestAt) < period;
+      return (*_completedSpeedTestAt - *_startedSpeedTestAt) <= period;
     }
 }
 }

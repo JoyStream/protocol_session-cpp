@@ -456,11 +456,11 @@ TEST_F(SessionTest, buying)
     firstStart();
 
     // Add connection and announce seller terms, which are good enough, and hence an invitation should arrive
-    add(first);
+    addAndRespondToSpeedTest(first);
     assertSellerInvited(first);
 
     // Add another seller with good terms
-    add(second);
+    addAndRespondToSpeedTest(second);
     assertSellerInvited(second);
 
     // Add another seller with bad terms
@@ -481,7 +481,7 @@ TEST_F(SessionTest, buying)
     EXPECT_TRUE(spy->blank()); // Nothing should happen, as min 3 good sellers are required
 
     // Make last good one join
-    add(third);
+    addAndRespondToSpeedTest(third);
     assertSellerInvited(third);
     spy->reset();
 
@@ -660,6 +660,88 @@ TEST_F(SessionTest, buying_seller_sent_invalid_piece)
     cleanup();
 }
 
+TEST_F(SessionTest, seller_responds_with_wrong_test_payload_size)
+{
+  init(Coin::Network::testnet3);
+
+  // min #sellers = 1
+  protocol_wire::BuyerTerms buyerTerms(24, 200, 1, 400);
+
+  SellerPeer first(0, protocol_wire::SellerTerms(22, 134, 10, 88, 32),5634, session->network());
+
+  assert(buyerTerms.satisfiedBy(first.terms));
+
+  toBuyMode(buyerTerms, TorrentPieceInformation());
+
+  // Start session
+  firstStart();
+
+  //
+  add(first);
+
+  auto expectedPayloadSize = session->speedTestPolicy().payloadSize();
+
+  // seller responds with a different payload size than requested
+  respondToSpeedTestRequest(first, expectedPayloadSize * 2);
+
+  // The seller should have been removed for sending bad test payload
+  assertConnectionRemoved(first.id, DisconnectCause::seller_failed_speed_test);
+
+  cleanup();
+}
+
+TEST_F(SessionTest, seller_slow_to_respond_to_test_payload)
+{
+  init(Coin::Network::testnet3);
+
+  std::chrono::seconds timePassed(0);
+
+  std::function<std::chrono::high_resolution_clock::time_point()> getTime = [&timePassed]() {
+    return std::chrono::high_resolution_clock::time_point::min() + timePassed;
+  };
+
+  session->setTimeGetter(getTime);
+
+  SpeedTestPolicy speedTestPolicy;
+  speedTestPolicy.setMaxTimeToRespond(std::chrono::seconds(10));
+  session->setSpeedTestPolicy(speedTestPolicy);
+
+  auto expectedPayloadSize = speedTestPolicy.payloadSize();
+
+  // min #sellers = 1
+  protocol_wire::BuyerTerms buyerTerms(24, 200, 1, 400);
+
+  SellerPeer first(0, protocol_wire::SellerTerms(22, 134, 10, 88, 32),5634, session->network());
+  SellerPeer second(1, protocol_wire::SellerTerms(22, 134, 10, 88, 32),5634, session->network());
+
+  assert(buyerTerms.satisfiedBy(first.terms));
+  assert(buyerTerms.satisfiedBy(second.terms));
+
+  toBuyMode(buyerTerms, TorrentPieceInformation());
+
+  // Start session
+  firstStart();
+
+  //
+  add(first);
+
+  // seller responds in time
+  timePassed+= std::chrono::seconds(5);
+  respondToSpeedTestRequest(first, expectedPayloadSize);
+
+  assertSellerInvited(first);
+
+  add(second);
+
+  // seller doesn't respond in time
+  timePassed += std::chrono::seconds(11);
+  respondToSpeedTestRequest(second, expectedPayloadSize);
+
+  // The seller should have been removed for being slow
+  assertConnectionRemoved(second.id, DisconnectCause::seller_failed_speed_test);
+
+  cleanup();
+}
 
 int main(int argc, char *argv[])
 {
