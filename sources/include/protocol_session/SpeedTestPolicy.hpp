@@ -18,12 +18,14 @@ namespace protocol_session {
       uint32_t maxPayloadSize() const;
       std::chrono::seconds maxTimeToRespond() const;
       bool isEnabled() const;
+      bool disconnectIfSlow() const;
 
       void setPayloadSize(uint32_t);
       void setMaxPayloadSize(uint32_t);
       void setMaxTimeToRespond(std::chrono::seconds);
       void enable();
       void disable();
+      void setDisconnectIfSlow(bool);
 
     private:
 
@@ -31,6 +33,7 @@ namespace protocol_session {
       uint32_t _maxPayloadSize;
       std::chrono::seconds _maxTimeToRespond;
       bool _enabled;
+      bool _disconnectIfSlow;
 
   };
 

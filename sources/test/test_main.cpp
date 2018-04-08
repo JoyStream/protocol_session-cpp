@@ -704,6 +704,7 @@ TEST_F(SessionTest, seller_slow_to_respond_to_test_payload)
 
   SpeedTestPolicy speedTestPolicy;
   speedTestPolicy.setMaxTimeToRespond(std::chrono::seconds(10));
+  speedTestPolicy.setDisconnectIfSlow(true);
   session->setSpeedTestPolicy(speedTestPolicy);
 
   auto expectedPayloadSize = speedTestPolicy.payloadSize();

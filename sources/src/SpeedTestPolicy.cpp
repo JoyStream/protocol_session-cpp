@@ -8,7 +8,8 @@ namespace protocol_session {
     _payloadSize(500000),
     _maxTimeToRespond(std::chrono::seconds(5)),
     _enabled(true),
-    _maxPayloadSize(2000000) {
+    _maxPayloadSize(2000000),
+    _disconnectIfSlow(false) {
 
   }
 
@@ -26,6 +27,10 @@ namespace protocol_session {
 
   bool SpeedTestPolicy::isEnabled() const {
     return _enabled;
+  }
+
+  bool SpeedTestPolicy::disconnectIfSlow() const {
+    return _disconnectIfSlow;
   }
 
   void SpeedTestPolicy::setPayloadSize(uint32_t payloadSize) {
@@ -46,6 +51,10 @@ namespace protocol_session {
 
   void SpeedTestPolicy::disable() {
     _enabled = false;
+  }
+
+  void SpeedTestPolicy::setDisconnectIfSlow(bool disconnectIfSlow) {
+    _disconnectIfSlow = disconnectIfSlow;
   }
 }
 }

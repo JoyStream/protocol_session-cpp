@@ -229,16 +229,21 @@ namespace detail {
         // record completion time
         c->endingSpeedTest();
 
-        if (c->speedTestCompletedInLessThan(_session->speedTestPolicy().maxTimeToRespond())) {
-          // Invite seller if they met the speedTestPolicy requirement
+        if (!_session->speedTestPolicy().disconnectIfSlow()) {
           maybeInviteSeller(c);
-
         } else {
-          // otherwise disconnect them
-          removeConnection(id, DisconnectCause::seller_failed_speed_test);
 
-          // Notify state machine about deletion
-          throw protocol_statemachine::exception::StateMachineDeletedException();
+          if (c->speedTestCompletedInLessThan(_session->speedTestPolicy().maxTimeToRespond())) {
+            // Invite seller if they met the speedTestPolicy requirement
+            maybeInviteSeller(c);
+
+          } else {
+            // otherwise disconnect them
+            removeConnection(id, DisconnectCause::seller_failed_speed_test);
+
+            // Notify state machine about deletion
+            throw protocol_statemachine::exception::StateMachineDeletedException();
+          }
         }
 
       }
