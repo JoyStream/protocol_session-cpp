@@ -162,6 +162,12 @@ namespace detail {
 
       return deliveryTime.count();
     }
+
+    template <class ConnectionIdType>
+    void Connection<ConnectionIdType>::abandonSpeedTest() {
+      _completedSpeedTestAt = boost::none;
+      _startedSpeedTestAt = boost::none;
+    }
 }
 }
 }
