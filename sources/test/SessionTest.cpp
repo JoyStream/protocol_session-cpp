@@ -461,6 +461,18 @@ void SessionTest::add(SellerPeer & peer) {
     session->processMessageOnConnection(peer.id, protocol_wire::Sell(peer.terms, peer.sellerTermsIndex));
 }
 
+void SessionTest::addAndRespondToSpeedTest(SellerPeer & peer) {
+    add(peer);
+
+    // Seller will automatically be speed tested, so we will have them send a speed test payload
+    auto payloadSize = session->speedTestPolicy().payloadSize();
+    respondToSpeedTestRequest(peer, payloadSize);
+}
+
+void SessionTest::respondToSpeedTestRequest(SellerPeer & peer, uint32_t payloadSize) {
+  session->processMessageOnConnection(peer.id, protocol_wire::SpeedTestPayload(payloadSize));
+}
+
 void SessionTest::completeExchange(SellerPeer & peer) {
     ConnectionSpy<ID> * c = peer.spy;
 
@@ -526,7 +538,7 @@ bool SessionTest::hasPendingFullPieceRequest(const std::vector<SellerPeer> & pee
 
 void SessionTest::takeSingleSellerToExchange(SellerPeer & peer) {
     // Add connection and announce seller terms
-    add(peer);
+    addAndRespondToSpeedTest(peer);
     assertSellerInvited(peer);
     spy->reset();
 

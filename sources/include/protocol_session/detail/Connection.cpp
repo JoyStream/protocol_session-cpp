@@ -30,7 +30,10 @@ namespace detail {
                                              const protocol_statemachine::ReceivedFullPiece & receivedFullPiece,
                                              const protocol_statemachine::MessageOverflow & remoteMessageOverflow,
                                              const protocol_statemachine::MessageOverflow & localMessageOverflow,
-                                             Coin::Network network)
+                                             const protocol_statemachine::SellerCompletedSpeedTest & sellerCompletedSpeedTest,
+                                             const protocol_statemachine::BuyerRequestedSpeedTest & buyerRequestedSpeedTest,
+                                             Coin::Network network,
+                                             const std::function<std::chrono::high_resolution_clock::time_point()> & getTime)
         : _connectionId(connectionId)
         , _machine(peerAnnouncedMode,
                    invitedToOutdatedContract,
@@ -47,8 +50,11 @@ namespace detail {
                    receivedFullPiece,
                    remoteMessageOverflow,
                    localMessageOverflow,
+                   sellerCompletedSpeedTest,
+                   buyerRequestedSpeedTest,
                    0,
-                   network) {
+                   network)
+        , _getTime(getTime) {
 
         // Initiating state machine
         _machine.initiate();
@@ -114,12 +120,53 @@ namespace detail {
                                                     status::CBStateMachine(_machine.getInnerStateTypeIndex(),
                                                                            _machine.announcedModeAndTermsFromPeer(),
                                                                            _machine.payor(),
-                                                                           _machine.payee()));
+                                                                           _machine.payee(),
+                                                                           timeToDeliverTestPayload()));
     }
 
     template <class ConnectionIdType>
     PieceDeliveryPipeline & Connection<ConnectionIdType>::pieceDeliveryPipeline() {
       return _pieceDeliveryPipeline;
+    }
+
+    template <class ConnectionIdType>
+    bool Connection<ConnectionIdType>::hasStartedSpeedTest() const {
+      return !!_startedSpeedTestAt;
+    }
+
+    template <class ConnectionIdType>
+    bool Connection<ConnectionIdType>::hasCompletedSpeedTest() const {
+      return !!_completedSpeedTestAt;
+    }
+
+    template <class ConnectionIdType>
+    void Connection<ConnectionIdType>::startingSpeedTest() {
+      _startedSpeedTestAt = _getTime();
+    }
+
+    template <class ConnectionIdType>
+    void Connection<ConnectionIdType>::endingSpeedTest() {
+      _completedSpeedTestAt = _getTime();
+    }
+
+    template <class ConnectionIdType>
+    bool Connection<ConnectionIdType>::speedTestCompletedInLessThan(std::chrono::seconds period) {
+      return (*_completedSpeedTestAt - *_startedSpeedTestAt) <= period;
+    }
+
+    template <class ConnectionIdType>
+    int32_t Connection<ConnectionIdType>::timeToDeliverTestPayload() const {
+      if (!hasCompletedSpeedTest()) return -1;
+
+      auto deliveryTime = (*_completedSpeedTestAt - *_startedSpeedTestAt);
+
+      return deliveryTime.count();
+    }
+
+    template <class ConnectionIdType>
+    void Connection<ConnectionIdType>::abandonSpeedTest() {
+      _completedSpeedTestAt = boost::none;
+      _startedSpeedTestAt = boost::none;
     }
 }
 }

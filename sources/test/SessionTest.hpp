@@ -13,6 +13,7 @@
 #include <SessionSpy.hpp>
 #include <common/P2PKScriptPubKey.hpp>
 #include <common/UnspentP2SHOutput.hpp>
+#include <chrono>
 
 using namespace joystream;
 using namespace joystream::protocol_session;
@@ -236,6 +237,9 @@ public:
     }
 
     void add(SellerPeer &);
+    void addAndRespondToSpeedTest(SellerPeer &);
+    void respondToSpeedTestRequest(SellerPeer &, uint32_t);
+
     //void join(const SellerPeer &);
     void completeExchange(SellerPeer &);
     bool hasPendingFullPieceRequest(const std::vector<SellerPeer> &);
