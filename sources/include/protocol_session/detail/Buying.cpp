@@ -255,6 +255,19 @@ namespace detail {
 
         // Prepare sellers before we interrupt with new mode
         politeSellerCompensation();
+
+        // Reset speed testing state for all connections that have not completed a speed test
+        // This is to ensure when the session comes back to buying mode it will make sure to send a speed test request
+        // to sellers that have not completed yet.
+        for(auto itr = _session->_connections.cbegin();itr != _session->_connections.cend();) {
+            auto connection = itr->second;
+
+            if (!connection->hasCompletedSpeedTest()) {
+              connection->abandonSpeedTest();
+            }
+
+            itr++;
+        }
     }
 
     template <class ConnectionIdType>

@@ -93,6 +93,7 @@ namespace detail {
         bool hasCompletedSpeedTest() const;
         bool speedTestCompletedInLessThan(std::chrono::seconds);
         int32_t timeToDeliverTestPayload() const;
+        void abandonSpeedTest();
 
     private:
 
