@@ -267,6 +267,41 @@ namespace detail {
       std::clog << "Error: remoteMessageOverflow from buyer connection " << id << std::endl;
 
       removeConnection(id, DisconnectCause::buyer_message_overflow);
+
+      // Notify state machine about deletion
+      throw protocol_statemachine::exception::StateMachineDeletedException();
+    }
+
+    template<class ConnectionIdType>
+    void Selling<ConnectionIdType>::buyerRequestedSpeedTest(const ConnectionIdType & id, uint32_t payloadSize) {
+      // We cannot have connection and be stopped
+      assert(_session->state() != SessionState::stopped);
+
+      // Connection must be live
+      assert(_session->hasConnection(id));
+
+      auto connection = _session->get(id);
+
+      // Only one speed test is allowed - allow more in the future?
+      if (connection->hasStartedSpeedTest()) {
+        removeConnection(id, DisconnectCause::buyer_requested_too_many_speed_tests);
+
+        // Notify state machine about deletion
+        throw protocol_statemachine::exception::StateMachineDeletedException();
+
+      } else {
+
+        if (payloadSize > _session->speedTestPolicy().maxPayloadSize()) {
+          removeConnection(id, DisconnectCause::buyer_speed_test_payload_requested_too_large);
+
+          // Notify state machine about deletion
+          throw protocol_statemachine::exception::StateMachineDeletedException();
+        }
+
+        connection->startingSpeedTest();
+        connection->processEvent(protocol_statemachine::event::SendTestPayload());
+        connection->endingSpeedTest();
+      }
     }
 
     template<class ConnectionIdType>

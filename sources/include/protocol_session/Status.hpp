@@ -30,11 +30,13 @@ namespace status {
         CBStateMachine(const std::type_index & innerStateTypeIndex,
                        const protocol_statemachine::AnnouncedModeAndTerms & announcedModeAndTermsFromPeer,
                        const paymentchannel::Payor & payor,
-                       const paymentchannel::Payee & payee)
+                       const paymentchannel::Payee & payee,
+                       const int32_t latency)
             : innerStateTypeIndex(innerStateTypeIndex)
             , announcedModeAndTermsFromPeer(announcedModeAndTermsFromPeer)
             , payor(payor)
-            , payee(payee) {
+            , payee(payee)
+            , latency(latency) {
         }
 
         // Type index of innermost currently active state
@@ -53,6 +55,9 @@ namespace status {
 
         // Payee side of payment channel interaction
         paymentchannel::Payee payee;
+
+        // Number of ticks from underlying clock used to measure how long it took to send test payload
+        int32_t latency;
 
     };
 

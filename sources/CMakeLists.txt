@@ -17,6 +17,7 @@ set(
     src/PieceInformation.cpp
     src/common.cpp
     src/PieceDeliveryPipeline.cpp
+    src/SpeedTestPolicy.cpp
 )
 
 # === build library ===

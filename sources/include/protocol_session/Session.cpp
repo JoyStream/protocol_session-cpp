@@ -47,7 +47,8 @@ namespace protocol_session {
         , _observing(nullptr)
         , _selling(nullptr)
         , _buying(nullptr)
-        , _network(network) {
+        , _network(network)
+        , _getTime(std::chrono::high_resolution_clock::now) {
 
         time(&_started);
     }
@@ -912,6 +913,26 @@ namespace protocol_session {
     }
 
     template<class ConnectionIdType>
+    void Session<ConnectionIdType>::sellerCompletedSpeedTest(const ConnectionIdType & id, bool successful) {
+
+        assert(hasConnection(id));
+        assert(_mode == SessionMode::buying);
+        assert(_observing == nullptr && _buying != nullptr && _selling == nullptr);
+
+        _buying->sellerCompletedSpeedTest(id, successful);
+    }
+
+    template<class ConnectionIdType>
+    void Session<ConnectionIdType>::buyerRequestedSpeedTest(const ConnectionIdType & id, uint32_t payloadSize) {
+
+        assert(hasConnection(id));
+        assert(_mode == SessionMode::selling);
+        assert(_observing == nullptr && _buying == nullptr && _selling != nullptr);
+
+        _selling->buyerRequestedSpeedTest(id, payloadSize);
+    }
+
+    template<class ConnectionIdType>
     detail::Connection<ConnectionIdType> * Session<ConnectionIdType>::createConnection(const ConnectionIdType & id, const SendMessageOnConnectionCallbacks & sendMessageCallbacks) {
 
         return new detail::Connection<ConnectionIdType>(
@@ -931,7 +952,10 @@ namespace protocol_session {
         [this, id](const protocol_wire::PieceData & p) { this->receivedFullPiece(id, p); },
         [this, id]() { this->remoteMessageOverflow(id); },
         [this, id]() { this->localMessageOverflow(id); },
-        _network);
+        [this, id](bool successful) { this->sellerCompletedSpeedTest(id, successful); },
+        [this, id](uint32_t payloadSize) { this->buyerRequestedSpeedTest(id, payloadSize); },
+        _network,
+        _getTime);
     }
 
     template <class ConnectionIdType>
@@ -1014,5 +1038,21 @@ namespace protocol_session {
 
         return connection;
     }
+
+    template <class ConnectionIdType>
+    SpeedTestPolicy Session<ConnectionIdType>::speedTestPolicy() const {
+      return _speedTestPolicy;
+    }
+
+    template <class ConnectionIdType>
+    void Session<ConnectionIdType>::setSpeedTestPolicy(const SpeedTestPolicy policy) {
+      _speedTestPolicy = policy;
+    }
+
+    template <class ConnectionIdType>
+    void Session<ConnectionIdType>::setTimeGetter(const std::function<std::chrono::high_resolution_clock::time_point()> & timeGetter) {
+      _getTime = timeGetter;
+    }
+
 }
 }

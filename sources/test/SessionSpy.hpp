@@ -80,6 +80,8 @@ typedef SubroutineCallbackSlot< protocol_wire::Ready> SendReadyCallbackSlot;
 typedef SubroutineCallbackSlot< protocol_wire::RequestFullPiece> SendRequestFullPieceCallbackSlot;
 typedef SubroutineCallbackSlot< protocol_wire::FullPiece> SendFullPieceCallbackSlot;
 typedef SubroutineCallbackSlot< protocol_wire::Payment> SendPaymentCallbackSlot;
+typedef SubroutineCallbackSlot< protocol_wire::SpeedTestRequest> SendSpeedTestRequestCallbackSlot;
+typedef SubroutineCallbackSlot< protocol_wire::SpeedTestPayload> SendSpeedTestPayloadCallbackSlot;
 
 template <class ConnectionIdType>
 using FullPieceArrivedCallbackSlot = FunctionCallbackSlot<bool, ConnectionIdType, protocol_wire::PieceData, int>;
@@ -116,6 +118,8 @@ struct ConnectionSpy {
         sendRequestFullPieceCallbackSlot.clear();
         sendFullPieceCallbackSlot.clear();
         sendPaymentCallbackSlot.clear();
+        sendSpeedTestRequestCallbackSlot.clear();
+        sendSpeedTestPayloadCallbackSlot.clear();
     }
 
     bool blank() const { return sendObserveCallbackSlot.empty() &&
@@ -126,7 +130,9 @@ struct ConnectionSpy {
                                 sendReadyCallbackSlot.empty() &&
                                 sendRequestFullPieceCallbackSlot.empty() &&
                                 sendFullPieceCallbackSlot.empty() &&
-                                sendPaymentCallbackSlot.empty();
+                                sendPaymentCallbackSlot.empty() &&
+                                sendSpeedTestPayloadCallbackSlot.empty() &&
+                                sendSpeedTestRequestCallbackSlot.empty();
                        }
 
     void createCallbacks() {
@@ -139,6 +145,8 @@ struct ConnectionSpy {
         callbacks.request_full_piece = sendRequestFullPieceCallbackSlot.hook();
         callbacks.full_piece = sendFullPieceCallbackSlot.hook();
         callbacks.payment = sendPaymentCallbackSlot.hook();
+        callbacks.speedTestRequest = sendSpeedTestRequestCallbackSlot.hook();
+        callbacks.speedTestPayload = sendSpeedTestPayloadCallbackSlot.hook();
     }
 
     int callbackCallCount() const {
@@ -150,7 +158,9 @@ struct ConnectionSpy {
                sendReadyCallbackSlot.size() +
                sendRequestFullPieceCallbackSlot.size() +
                sendFullPieceCallbackSlot.size() +
-               sendPaymentCallbackSlot.size();
+               sendPaymentCallbackSlot.size() +
+               sendSpeedTestPayloadCallbackSlot.size() +
+               sendSpeedTestRequestCallbackSlot.size();
     }
 
     ConnectionIdType id;
@@ -166,6 +176,8 @@ struct ConnectionSpy {
     SendRequestFullPieceCallbackSlot sendRequestFullPieceCallbackSlot;
     SendFullPieceCallbackSlot sendFullPieceCallbackSlot;
     SendPaymentCallbackSlot sendPaymentCallbackSlot;
+    SendSpeedTestPayloadCallbackSlot sendSpeedTestPayloadCallbackSlot;
+    SendSpeedTestRequestCallbackSlot sendSpeedTestRequestCallbackSlot;
 
 };
 
