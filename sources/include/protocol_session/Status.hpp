@@ -31,7 +31,7 @@ namespace status {
                        const protocol_statemachine::AnnouncedModeAndTerms & announcedModeAndTermsFromPeer,
                        const paymentchannel::Payor & payor,
                        const paymentchannel::Payee & payee,
-                       const int32_t latency)
+                       const boost::optional<std::chrono::milliseconds> latency)
             : innerStateTypeIndex(innerStateTypeIndex)
             , announcedModeAndTermsFromPeer(announcedModeAndTermsFromPeer)
             , payor(payor)
@@ -56,8 +56,8 @@ namespace status {
         // Payee side of payment channel interaction
         paymentchannel::Payee payee;
 
-        // Number of ticks from underlying clock used to measure how long it took to send test payload
-        int32_t latency;
+        // Time it took to successfully deliver test payload
+        boost::optional<std::chrono::milliseconds> latency;
 
     };
 
