@@ -714,9 +714,11 @@ TEST_F(SessionTest, seller_slow_to_respond_to_test_payload)
 
   SellerPeer first(0, protocol_wire::SellerTerms(22, 134, 10, 88, 32),5634, session->network());
   SellerPeer second(1, protocol_wire::SellerTerms(22, 134, 10, 88, 32),5634, session->network());
+  SellerPeer third(2, protocol_wire::SellerTerms(22, 134, 10, 88, 32),5634, session->network());
 
   assert(buyerTerms.satisfiedBy(first.terms));
   assert(buyerTerms.satisfiedBy(second.terms));
+  assert(buyerTerms.satisfiedBy(third.terms));
 
   toBuyMode(buyerTerms, TorrentPieceInformation());
 
@@ -729,6 +731,9 @@ TEST_F(SessionTest, seller_slow_to_respond_to_test_payload)
   // seller responds in time
   timePassed+= std::chrono::seconds(5);
   respondToSpeedTestRequest(first, expectedPayloadSize);
+  auto pFirstConnectionStatus = session->connectionStatus(first.id);
+  auto latencyFirst = *pFirstConnectionStatus.machine.latency;
+  EXPECT_EQ(latencyFirst.count(), 5 * 1000);
 
   assertSellerInvited(first);
 
@@ -740,6 +745,15 @@ TEST_F(SessionTest, seller_slow_to_respond_to_test_payload)
 
   // The seller should have been removed for being slow
   assertConnectionRemoved(second.id, DisconnectCause::seller_failed_speed_test);
+
+  spy->reset();
+
+  // Peer doesn't respond to speed test payload
+  add(third);
+
+  auto pThirdConnectionStatus = session->connectionStatus(third.id);
+
+  EXPECT_EQ(pThirdConnectionStatus.machine.latency, boost::none);
 
   cleanup();
 }
