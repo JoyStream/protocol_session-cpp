@@ -155,12 +155,11 @@ namespace detail {
     }
 
     template <class ConnectionIdType>
-    int32_t Connection<ConnectionIdType>::timeToDeliverTestPayload() const {
-      if (!hasCompletedSpeedTest()) return -1;
+    boost::optional<std::chrono::milliseconds>
+    Connection<ConnectionIdType>::timeToDeliverTestPayload() const {
+      if (!hasCompletedSpeedTest()) return boost::none;
 
-      auto deliveryTime = (*_completedSpeedTestAt - *_startedSpeedTestAt);
-
-      return deliveryTime.count();
+      return std::chrono::duration_cast<std::chrono::milliseconds>(*_completedSpeedTestAt - *_startedSpeedTestAt);
     }
 
     template <class ConnectionIdType>
